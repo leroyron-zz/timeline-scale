@@ -56,16 +56,16 @@
         
         this.expansion = function () {
             _onexpansion = this.onexpansion = function (p) {
-                if (expand.percent+p < 0 || expand.percent+p > 10) {
+                if (expand.percent+p < 0 || expand.percent+p > phases.countMultipleTen) {
                     return expand.percent/10
                 }
                 expand.percent += p;
                 expand.percent = expand.percent < 0 
                 ? expand.percent = 0
-                : expand.percent > 10 
-                ? expand.percent = 10 : expand.percent
+                : expand.percent > phases.countMultipleTen 
+                ? expand.percent = phases.countMultipleTen : expand.percent
 
-                var percent = expand.percent/10
+                var percent = expand.percent/phases.countMultipleTen*phases.total
                 events.deltaX = mouse.x
                 var percentValue = (expand.out - expand.in) * percent
                 var widthValue = (expand.freq.max - expand.freq.min) * percent
@@ -124,49 +124,55 @@
                     expansion.onExpansion(expansion.onexpansion(1))
                 }
                 events._resize()
-                expansion.update()
+                expansion.filter()
             }
             
             return zoom
         }
 
-        this.range = { left: 0, right: 0}// get current date 
-        this.update = function () {
-            var widthRange = TC.track.width/phases.currentFrequency.bands
-            
-            if (!this.range.elements) {// new element range finder when 'undefined'
-                this.range.elements = phases.elements[phases.currentFrequency.name]
-                this.range.list = this.range.elements.list 
-                this.range.length = Object.keys(this.range.list).length
-                this.range.tick = 0
+        var ranges = this.ranges = {generate: [phases.current], length: 1}// store ranges
+        var currentRange = {}
+        this.filter = function () {
+            // filter calendar draws during scale
+            for (var r = 0; r < ranges.length; r++) {
+                var frequency = phases.frequencies[ranges.generate[r]] || phases.currentFrequency
+                var widthRange = TC.track.width/frequency.bands
+                var range = this.ranges[frequency.name] ? this.ranges[frequency.name] : this.ranges[frequency.name] = {   // new range finder
+                    elements: phases.elements[frequency.name] || (phases.elements[frequency.name] = generate.regen(frequency.name)),
+                    list: phases.elements[frequency.name].list ,
+                    length: Object.keys(phases.elements[frequency.name].list).length,
+                    tick: 0 
+                }
+
+                range.expand = Math.floor(range.length - range.length/(10/expand.percent))
+                
+                range.expand = range.expand <= 0 ? 0 : range.expand >= range.length ? range.length : range.expand
+                
+                range.left = Math.floor(TC.locator.offsetLeft / widthRange) - range.expand
+                
+                range.right = Math.floor(TC.locator.offsetLeft  / widthRange) + range.expand
+                if (!widthRange || range.left == range.tick) // optimize with tick
+                    return;
+
+                range.tick = range.left
+
+                range.left = range.left < 0 ? 0 : range.left > range.length - 1 ? range.length - 1 : range.left
+
+                range.right = range.right < 0 ? 0 : range.right > range.length - 1 ? range.length - 1 : range.right
+                
+                range.start = range.left - 1
+                range.start = range.start < 0 ? 0 : range.start
+                range.end = range.right + 1
+                range.end = range.end > range.length - 1 ? range.length - 1 : range.end
+                
+                this.start = range.list[Object.keys(range.list)[range.start]]
+                this.end = range.list[Object.keys(range.list)[range.end]]
+
+                generate.degen(frequency.name, range.start, range.end, (ranges.length > 1 && ranges.length != r+1))
+                generate.regen(frequency.name, range.start, range.end, (ranges.length > 1 && ranges.length != r+1))
+
+                ctx.output('Filter Draw Range:'+this.start.span.label.innerHTML+' '+ this.end.span.label.innerHTML)
             }
-            this.range.expand = Math.floor(this.range.length - this.range.length/(10/expand.percent))
-            
-            this.range.left = Math.floor(TC.locator.offsetLeft / widthRange) - this.range.expand
-            
-            this.range.right = Math.floor(TC.locator.offsetLeft  / widthRange) + this.range.expand
-            if (!widthRange || this.range.left == this.range.tick) // optimize with tick
-                return;
-
-            this.range.tick = this.range.left
-
-            this.range.left = this.range.left < 0 ? 0 : this.range.left > this.range.length - 1 ? this.range.length - 1 : this.range.left
-
-            console.log('dd', this.range.tick)
-
-            this.range.right = this.range.right < 0 ? 0 : this.range.right > this.range.length - 1 ? this.range.length - 1 : this.range.right
-            
-            this.range.start = this.range.left - 1
-            this.range.start = this.range.start < 0 ? 0 : this.range.start
-            this.range.end = this.range.right + 1
-            this.range.end = this.range.end > this.range.length - 1 ? this.range.length - 1 : this.range.end
-            this.start = this.range.list[Object.keys(this.range.list)[this.range.start]]
-            this.end = this.range.list[Object.keys(this.range.list)[this.range.end]]
-
-            generate.degen(phases.currentFrequency, this.range.start, this.range.end)
-            generate.regen(phases.currentFrequency, this.range.start, this.range.end)
-            
-            ctx.output('Optimization Draw Range:'+this.start.span.label.innerText+' '+ this.end.span.label.innerText)
         }
 
         events._resize = function () {
@@ -240,7 +246,7 @@
             //*console.log('CL.locator: '+CL.locator.offsetLeft+' TC.locator: '+TC.locator.offsetLeft+' ')
             //// 
             mouse.x = events.deltaX
-            //expansion.update()
+            //expansion.filter()
         }
         CL.addEventListener('mousemove', events._onmousemove)
 
@@ -267,7 +273,7 @@
                         //leftRes = (leftTC)
                         TC.style.left = leftTC+'px'
                         TC.locator.style.left = leftTCLocator+'px'
-                        expansion.update()
+                        expansion.filter()
                     }, 10)
                 }
             } else if (retract.mode == 'left') {
@@ -281,28 +287,50 @@
                 events._resize()
             }
             //
-            expansion.update()
+            expansion.filter()
         }
 
         this.leftOffset = 0.0
         this.rightRetract = 1.0
-        TC.track._resize = function () {
-            this.scale = phases.currentFrequency ? (expand.value*phases.currentFrequency.bands) : 100
+        TC.track._resize = function () {// only scale year frequency the rest will follow
+            this.scale = phases.frequencies.year ? (expand.value*phases.frequencies.year.bands) : 100
             this.width = TC.width * (this.scale / 100)
             this.style.width = this.scale + '%'
         }
         window.resizeCalls.push(TC.track)
         this._resize = function () {
-            this.update()
+            this.filter()
         }
         window.resizeCalls.push(this)
         expand.enter()
         this.handle = this.expansion()
         Wheel(CL.track, this.handle)
-        this.onexpansion(0.0)
         var phaseChange = function (p) {
-            console.log(p)
+            var phaseId = p << 0
+            for (var sLen = 0; sLen < phases.currentFrequency.subLength; sLen++) {
+                phases.currentFrequency.subCheck(p, sLen)
+                    console.log(p)
+            }
+            if (phases.phaseId == phases.total - (ranges.phaseId = phaseId))
+                return;
+
+            ranges.generate = []
+            for (var pI = 0; pI < phaseId+1; pI++) {
+                ranges.generate[pI] = frequencies[Object.keys(frequencies)[pI]].name
+            }
+            phases.refrequency(ranges.generate[phaseId])
+            if (ranges.length != phaseId+1) {
+                ranges.length = phaseId+1
+                if (ranges[ranges.generate[ranges.length-2]]) ranges[ranges.generate[ranges.length-2]].tick = 'reset'
+                var range = ranges[ranges.generate[ranges.length-1]]
+                
+                if (range) { 
+                    range.tick = 'reset'
+                    generate.reset(ranges.generate[ranges.length-1], range.start, range.end)
+                }
+            }
         }
         this.expansionCalls.push(phaseChange)
+        this.onExpansion(this.onexpansion(0.0))
     }
 })(this.Calendar)

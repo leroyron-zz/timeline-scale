@@ -12,13 +12,13 @@
     
     //Public
     that.params = [
-        ['year', 0, 8, 50, ['quarter', 3]], 
-        ['month', 10, 12, 50, ['week', 13]], 
-        ['day', 20, 'daysInMonth', 50, ['morningNoon', 25], 'firstDayOfMonth'], 
-        ['hour', 30, 24, 30, ['tenMinutes', 35]], 
-        ['minute', 40, 60, 20, ['tenSeconds', 45]], 
-        ['second', 50, 60, 20], 
-        ['millisecond', 60, 100, 5]
+        ['year', 0, 8, 50, ['quarter', 0.3]], 
+        ['month', 1.0, 12, 50, ['week', 1.3]], 
+        ['day', 2.0, 'daysInMonth', 50, ['morningNoon', 2.5], 'firstDayOfMonth'], 
+        ['hour', 3.0, 24, 30, ['tenMinutes', 3.5]], 
+        ['minute', 4.0, 60, 20, ['tenSeconds', 4.5]], 
+        ['second', 5.0, 60, 20], 
+        ['millisecond', 6.0, 100, 5]
     ]
 
     //Class Init
@@ -85,6 +85,19 @@
             return obj
         }
 
+        this.getfrequencyName = function (phase) {
+            var paramsLen = Object.keys(this.frequencies).length
+            var frequencyId = paramsLen
+            
+            // assign the current frequency bands for render
+            if (typeof phase != 'undefined')
+                if (isNaN(phase))
+                    frequencyId = this.frequencies[phase].phase
+                else if (!isNaN(phase))
+                    frequencyId = Math.ceil(phase / (100 / paramsLen))
+            return this.frequencies[Object.keys(this.frequencies)[this.total - frequencyId]].name
+        }
+
         this.getfrequencyId = function (phase) {
             var paramsLen = Object.keys(this.frequencies).length
             var frequencyId = paramsLen
@@ -97,12 +110,28 @@
                     frequencyId = Math.ceil(phase / (100 / paramsLen))
             return frequencyId
         }
+
+        this.frequencies = {}
+        this.refrequency = function (phase) {
+            this.total = that.params.length
+            this.phase = phase
+            this.phaseId = this.getfrequencyId(phase)
+            this.previous = Object.keys(this.frequencies)[this.total - this.phaseId - 1]
+            this.previousFrequency = this.frequencies[this.previous]
+
+            this.current = Object.keys(this.frequencies)[this.total - this.phaseId]
+            this.currentFrequency = this.frequencies[this.current]
+
+            this.currentFrequency.subLength = Object.keys(this.currentFrequency.sub).length
+
+            this.next = Object.keys(this.frequencies)[this.total - this.phaseId + 1]
+            this.nextFrequency = this.frequencies[this.next]
+        }
         
         this.rephase = function (phase) {
-            var phaseArray = that.params
-            this.frequencies = {}
-            var pLen = this.total = phaseArray.length
-            var changePhase = 100 / pLen
+            this.total = that.params.length
+            this.countMultipleTen = this.total * 10
+            var changePhase = 100 / this.total
             // generate phase parameters
             var subRephase = function (subPhase) {
                 if (!subPhase) return;
@@ -113,20 +142,44 @@
                 }
                 return spArray
             }
-            for (var p = 0; p < pLen; p++) {
+            var subReset = function () {
+                calendar.ctx.style.freqs.label.visibility = 'visible'
+                calendar.ctx.style.freqs.band.label.visibility = 'hidden' 
+            }
+            var subCheck = function (p, sLen) {
+                if (calendar.ctx.style.freqs.label.visibility == 'visible') {
+                    if (p >= this.sub[Object.keys(this.sub)[sLen]].indice)
+                        this.subToggle()
+                } else {
+                    if (p <= this.sub[Object.keys(this.sub)[sLen]].indice)
+                        this.subToggle()
+                }
+            }
+            var subToggle = function () {
+                if (calendar.ctx.style.freqs.label.visibility == 'visible') {
+                    calendar.ctx.style.freqs.label.visibility = 'hidden'
+                    calendar.ctx.style.freqs.band.label.visibility = 'visible'
+                } else {
+                    calendar.ctx.style.freqs.label.visibility = 'visible'
+                    calendar.ctx.style.freqs.band.label.visibility = 'hidden' 
+                }
+            }
+            for (var p = 0; p < this.total; p++) {
                 this.frequencies[that.params[p][0]] = {
                     name: that.params[p][0],
-                    phase: pLen-p,
+                    phase: this.total-p,
                     indice: that.params[p][1],
                     bands: isNaN(that.params[p][2]) ? this[that.params[p][2]] : that.params[p][2],
                     span: that.params[p][3],
                     sub: subRephase(that.params[p][4]),
+                    subCheck: subCheck,
+                    subToggle: subToggle,
+                    subReset: subReset,
                     first: isNaN(that.params[p][5]) ? this[that.params[p][5]] : that.params[p][5],
                     change: changePhase * (p + 1)
                 }
             }
-            this.phase = phase
-            this.phaseId = this.getfrequencyId(phase)
+            this.refrequency(phase)
         }
         
         this.rephase(phase)
