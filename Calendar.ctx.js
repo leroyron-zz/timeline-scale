@@ -40,26 +40,10 @@
     
     
         this.styleSheet = document.createElement('style')
+        this.styleSheet.id = 'style#'+this.TL.id
         this.styleSheet.innerHTML = 
         [
-        '    #'+this.TL.id+' .span.freq {',
-        '        height: 20px;',
-        '        min-width: 50px;',
-        '        width: 7.142857142857143%;',
-        '    }',
-        '    #'+this.TL.id+' .span.freq label {',
-        '        visibility: visible;',
-        '    }',
-        '    #'+this.TL.id+' .span.freq .band div {',
-        '        width: 8.333333333333333%;',
-        '    }',
-        '    #'+this.TL.id+' .span.freq .band label {',
-        '        visibility: hidden;',
-        '    }',
-        '    #'+this.TL.id+' .span.freq .band div.first label {',
-        '        position: relative;',
-        '        top: -12px;',
-        '    } '
+        ''
         ].join('\n')
         this.container.appendChild(this.styleSheet)
     

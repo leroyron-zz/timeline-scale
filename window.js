@@ -46,3 +46,9 @@ window.getStyleRules = function (elem, rule) {
 
     return styleRule.style
 }
+
+window.addStyleRules = function (elem, rule, style) {
+    var sheet = elem.sheet
+    sheet.addRule(rule, style);
+    return sheet.rules[sheet.rules.length - 1].style
+}

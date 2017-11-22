@@ -40,8 +40,8 @@
         this.dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
         this.dayNamesShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
         this.getDayName = function (i, b) { return b ? this.dayNamesShort[i] : this.dayNames[i] }
-        this.firstDayOfMonth = function (y, m) { return new Date(y||this.current.year + "-" + m||this.current.month + "-" + 1).getDay() }
-        this.daysInMonth = function (y, m) { return new Date(y||this.current.year, m||this.current.month, 0).getDate() }
+        this.firstDayOfMonth = function (y, m) { return new Date((y||calendar.current.year) + "-" + (m||calendar.current.month) + "-" + 1).getDay() }
+        this.daysInMonth = function (y, m) { return new Date((y||calendar.current.year), (m||calendar.current.month), 0).getDate() }
         // time in day
         this.hour24Format = false
         this.hoursInDay = 24
@@ -143,25 +143,25 @@
                 return spArray
             }
             var subReset = function () {
-                calendar.ctx.style.freqs.label.visibility = 'visible'
-                calendar.ctx.style.freqs.band.label.visibility = 'hidden' 
+                calendar.ctx.style.toggle.freqs.label.visibility = 'visible'
+                calendar.ctx.style.toggle.freqs.band.label.visibility = 'hidden' 
             }
             var subCheck = function (p, sLen) {
-                if (calendar.ctx.style.freqs.label.visibility == 'visible') {
+                if (calendar.ctx.style.toggle.freqs.label.visibility == 'visible') {
                     if (p >= this.sub[Object.keys(this.sub)[sLen]].indice)
                         this.subToggle()
                 } else {
-                    if (p <= this.sub[Object.keys(this.sub)[sLen]].indice)
+                    if (p < this.sub[Object.keys(this.sub)[sLen]].indice)
                         this.subToggle()
                 }
             }
             var subToggle = function () {
-                if (calendar.ctx.style.freqs.label.visibility == 'visible') {
-                    calendar.ctx.style.freqs.label.visibility = 'hidden'
-                    calendar.ctx.style.freqs.band.label.visibility = 'visible'
+                if (calendar.ctx.style.toggle.freqs.label.visibility == 'visible') {
+                    calendar.ctx.style.toggle.freqs.label.visibility = 'hidden'
+                    calendar.ctx.style.toggle.freqs.band.label.visibility = 'visible'
                 } else {
-                    calendar.ctx.style.freqs.label.visibility = 'visible'
-                    calendar.ctx.style.freqs.band.label.visibility = 'hidden' 
+                    calendar.ctx.style.toggle.freqs.label.visibility = 'visible'
+                    calendar.ctx.style.toggle.freqs.band.label.visibility = 'hidden' 
                 }
             }
             for (var p = 0; p < this.total; p++) {

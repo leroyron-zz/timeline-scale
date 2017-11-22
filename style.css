@@ -53,6 +53,10 @@ body {
     height: 8px;
     border-left: #FFF 1px solid;
 }
+.span .band div.wait {
+    height: 5px;
+    border-left: #000 1px solid;
+}
 .span div {
     width: 100%;
 }
@@ -67,6 +71,7 @@ body {
     width: 1px;
     position: absolute !important;
     border-left: 1px solid #FFA218;
+    margin-left: -1px;
 }
 .output {
     position: absolute; bottom: 10px;
