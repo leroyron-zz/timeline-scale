@@ -69,10 +69,10 @@
                 events.deltaX = mouse.x
                 var percentValue = (expand.out - expand.in) * percent
                 var widthValue = (expand.freq.max - expand.freq.min) * percent
-                //*var CLpercent = events.deltaX/CL.clientWidth
+                //var CLpercent = events.deltaX/CL.clientWidth
                 if (expansion.centerFreq) TC.select = TC.children[expansion.centerFreq]
                 //var TC.percent = events.deltaX/(TC.clientWidth)
-                //*console.log(deltaTCSelectLeft)
+                //console.log(deltaTCSelectLeft)
                 TC.percent = events.deltaX/(TC.clientWidth)
                 TC.spanPercent = TC.percent*expand.offset
                 if (TC.select) {
@@ -86,8 +86,8 @@
             
                 expand.value = (expand.in+percentValue)
                 expand.offset = expand.in/expand.value
-                style.freqs.width = expand.value+"%";
-                style.freqs.minWidth = Math.ceil(expand.freq.min+widthValue)+"px";
+                style.main.freqs.width = expand.value+"%";
+                style.main.freqs.minWidth = Math.ceil(expand.freq.min+widthValue)+"px";
                 
                 // RESIZE -- re/assign offsets
                 TC.track._resize()
@@ -97,13 +97,13 @@
                     CL.locator.style.left = left+'px'
                 }
                 // RESIZE
-                //*console.log('scale%: '+expand.percent+' TC.spanPercent: '+(TC.spanPercent*100))
+                //console.log('scale%: '+expand.percent+' TC.spanPercent: '+(TC.spanPercent*100))
                 
-                //*console.log('left: '+this.leftRes+' osf: '+divRightRetract.offsetLeft)
+                //console.log('left: '+this.leftRes+' osf: '+divRightRetract.offsetLeft)
                 TC.style.left = (CL.locator.offsetLeft-TC.locator.offsetLeft)+'px'
                 //debugger
                 mouse.x = CL.locator.offsetLeft - (CL.offsetLeft+TC.offsetLeft) + CL.offsetLeft + container.scrollLeft
-                //*console.log(CL.locator.offsetLeft-TC.locator.offsetLeft)
+                //console.log(CL.locator.offsetLeft-TC.locator.offsetLeft)
                 //widthValue = (expand.max - expand.min) * expand.percent
                 //TC.style.minWidth = Math.ceil(expand.min+widthValue)+'px'
                 return percent
@@ -131,26 +131,39 @@
         }
 
         var ranges = this.ranges = {generate: [phases.current], length: 1}// store ranges
-        var currentRange = {}
+        this.current = []
         this.filter = function () {
+            var outputStr = ''
             // filter calendar draws during scale
+            this.offsetLeftStack = 0
             for (var r = 0; r < ranges.length; r++) {
+                var TCLocatorOffsetLeft = TC.locator.offsetLeft + this.offsetLeftStack
                 var frequency = phases.frequencies[ranges.generate[r]] || phases.currentFrequency
                 var widthRange = TC.track.width/frequency.bands
-                var range = this.ranges[frequency.name] ? this.ranges[frequency.name] : this.ranges[frequency.name] = {   // new range finder
+
+                var prevRangeGenerateName = ranges.generate[r-1]
+                var prevPhaseElements = phases.elements[prevRangeGenerateName]
+                var previous = this.current[r-1]
+
+                var range = this.ranges[frequency.name] ? this.ranges[frequency.name] : 
+                this.ranges[frequency.name] = {   // new range finder
                     elements: phases.elements[frequency.name] || (phases.elements[frequency.name] = generate.regen(frequency.name)),
-                    list: phases.elements[frequency.name].list ,
-                    length: Object.keys(phases.elements[frequency.name].list).length,
-                    tick: 0 
+                    list:  previous ? previous[frequency.name].list : phases.elements[frequency.name].list,
+                    length: previous ? Object.keys(previous[frequency.name]).length : Object.keys(phases.elements[frequency.name].list).length,
+                    tick: -1
                 }
+                //this.ranges[frequency.name].list = this.current[r] ? this.current[r].list : phases.elements[frequency.name].list
+                //this.ranges[frequency.name].length = this.current[r] ? Object.keys(this.current[r].list).length : Object.keys(phases.elements[frequency.name].list).length
+                
+                if (range.tick == -1) { range.tick = 0; continue;  }
 
                 range.expand = Math.floor(range.length - range.length/(10/expand.percent))
                 
                 range.expand = range.expand <= 0 ? 0 : range.expand >= range.length ? range.length : range.expand
                 
-                range.left = Math.floor(TC.locator.offsetLeft / widthRange) - range.expand
+                range.left = Math.floor(TCLocatorOffsetLeft / widthRange) - range.expand
                 
-                range.right = Math.floor(TC.locator.offsetLeft  / widthRange) + range.expand
+                range.right = Math.floor(TCLocatorOffsetLeft  / widthRange) + range.expand
                 if (!widthRange || range.left == range.tick) // optimize with tick
                     return;
 
@@ -164,15 +177,23 @@
                 range.start = range.start < 0 ? 0 : range.start
                 range.end = range.right + 1
                 range.end = range.end > range.length - 1 ? range.length - 1 : range.end
+                //debugger
                 
                 this.start = range.list[Object.keys(range.list)[range.start]]
+                this.current[r] = range.expand == 0 ? range.list[Object.keys(range.list)[range.start+1]] : undefined
+
+                if (this.current[r])  console.log('---------'+this.current[r].span.label.innerHTML);
                 this.end = range.list[Object.keys(range.list)[range.end]]
 
+                
+                this.offsetLeftStack += this.start.span.offsetLeft
+
+                console.log('filter '+frequency.name)
                 generate.degen(frequency.name, range.start, range.end, (ranges.length > 1 && ranges.length != r+1))
                 generate.regen(frequency.name, range.start, range.end, (ranges.length > 1 && ranges.length != r+1))
-
-                ctx.output('Filter Draw Range:'+this.start.span.label.innerHTML+' '+ this.end.span.label.innerHTML)
+                outputStr += this.start.span.label.innerHTML+' '+ this.end.span.label.innerHTML
             }
+            if (outputStr) ctx.output('Filter Draw Range:'+outputStr)
         }
 
         events._resize = function () {
@@ -201,7 +222,7 @@
             // RESIZE -- re/assign offsets - delta
             TC.left += (deltaTCLocatorLeft-TCLocatorLeft)
             var leftRes = (TCLocatorLeft+TC.left)
-            //*console.log('left: '+expansion.leftRes+' osf: '+divRightRetract.offsetLeft)
+            //console.log('left: '+expansion.leftRes+' osf: '+divRightRetract.offsetLeft)
             if (expansion.width > 100) {
                 TC.left -= CL.retract.right.offsetLeft-50 < leftRes ? (leftRes-CL.retract.right.offsetLeft)+50 : 0
     
@@ -217,6 +238,8 @@
             if (TC.track.clientWidth == (CL.clientWidth)) {
                 TC.style.left = '5px'
             }
+            TC.leftTCScroll = TC.offsetLeft
+            TC.leftTCLocatorScroll = TC.locator.offsetLeft
         }
 
         events._onmousemove = function (e) {
@@ -240,12 +263,12 @@
             //TC.locator.style.left = (TC.centerPercent*100)+'%'
             // 0.07035755478662054 .......
             TC.spanPercent = TC.percent*expand.offset
-            //*console.clear()
+            //console.clear()
             // TC.spanPercent GOOD FOR TIMESTAMP INSERT RE/POSITIONING, end to end
-            //*console.log('calendar%:'+CL.percent+' - timecode%:'+TC.percent+' - timespan%:'+TC.spanPercent+' - centerspan%:'+TC.centerPercent)
-            //*console.log('CL.locator: '+CL.locator.offsetLeft+' TC.locator: '+TC.locator.offsetLeft+' ')
+            //console.log('calendar%:'+CL.percent+' - timecode%:'+TC.percent+' - timespan%:'+TC.spanPercent+' - centerspan%:'+TC.centerPercent)
+            //console.log('CL.locator: '+CL.locator.offsetLeft+' TC.locator: '+TC.locator.offsetLeft+' ')
             //// 
-            mouse.x = events.deltaX
+            if (!dragScroll.interval)mouse.x = events.deltaX
             //expansion.filter()
         }
         CL.addEventListener('mousemove', events._onmousemove)
@@ -260,19 +283,21 @@
                 dragScroll.endX = events.mouseX
                 var scrollRate = (dragScroll.startX-dragScroll.endX)*(expand.value/500)
                 var width = (container.width * calendar.rightRetract)
-                var leftTC = TC.offsetLeft
-                var leftTCLocator = TC.locator.offsetLeft
-                
                 dragScroll.rate = scrollRate * 0.25
+                
     
                 if (!dragScroll.interval) {
+                    TC.leftTCScroll = TC.offsetLeft
+                    TC.leftTCLocatorScroll = TC.locator.offsetLeft
+    
                     clearInterval(dragScroll.interval)
                     dragScroll.interval = setInterval(function () {
-                        leftTC += dragScroll.rate
-                        leftTCLocator -= dragScroll.rate
+                        mouse.x = CL.locator.offsetLeft - (CL.offsetLeft+TC.offsetLeft) + container.scrollLeft
+                        TC.leftTCScroll += dragScroll.rate
+                        TC.leftTCLocatorScroll -= dragScroll.rate
                         //leftRes = (leftTC)
-                        TC.style.left = leftTC+'px'
-                        TC.locator.style.left = leftTCLocator+'px'
+                        TC.style.left = TC.leftTCScroll+'px'
+                        TC.locator.style.left = TC.leftTCLocatorScroll+'px'
                         expansion.filter()
                     }, 10)
                 }
