@@ -53,6 +53,10 @@ body {
     height: 8px;
     border-left: #FFF 1px solid;
 }
+.span .band div.start {
+    height: 3px;
+    border-left: #fff 1px solid;
+}
 .span .band div.wait {
     height: 5px;
     border-left: #000 1px solid;

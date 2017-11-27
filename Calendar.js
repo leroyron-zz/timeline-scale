@@ -7,12 +7,12 @@ var Calendar = Calendar || function (container, phase, x, y, width, height, curr
     var current = current || {}
     this.current = { 
         year: current.year || 2017, 
-        month: current.year || 10, 
-        day: current.year || 13, 
-        hour: current.year || 12, 
-        minute: current.year || 0, 
-        second: current.year || 0, 
-        millisecond: current.year || 0
+        month: current.month || 10, 
+        day: current.day || 13, 
+        hour: current.hour || 12, 
+        minute: current.minute || 0, 
+        second: current.second || 0, 
+        millisecond: current.millisecond || 0
     }
     
     //Class Declarations
@@ -20,7 +20,8 @@ var Calendar = Calendar || function (container, phase, x, y, width, height, curr
     this.events = new this.events.Init(this)
     this.phases = new this.phases.Init(this, phase)
     this.generate = new this.generate.Init(this, current)
-    this.expansion = new this.expansion.Init(this)   
+    this.expansion = new this.expansion.Init(this)
+    //this.streaming = new this.streaming(this, length)
     
     //Class Init
 }
