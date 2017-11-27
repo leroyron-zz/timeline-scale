@@ -12,13 +12,13 @@
     
     //Public
     that.params = [
-        ['year', 0, 8, 50, ['quarter', 0.3]], 
-        ['month', 1.0, 12, 50, ['week', 1.3]], 
-        ['day', 2.0, 'daysInMonth', 50, ['morningNoon', 2.5], 'firstDayOfMonth'], 
-        ['hour', 3.0, 24, 30, ['tenMinutes', 3.5]], 
-        ['minute', 4.0, 60, 20, ['tenSeconds', 4.5]], 
-        ['second', 5.0, 60, 20], 
-        ['millisecond', 6.0, 100, 5]
+        ['year', 'yearNamesSparse', 0, 8, 50, ['quarter', 'quarterNames', 0.3, 3/*'monthsInQuarter'*/], 0], 
+        ['month', 'monthNamesShort', 1.0, 12, 75, ['week', 'weekNames', 1.5, 7], 0], 
+        ['day', 'dayNamesShort', 2.0, 'daysInMonth', 50, ['morningNoon', 'morningNoonNames', 2.5], 'firstDayOfMonth'], 
+        ['hour', undefined, 3.0, 24, 30, ['tenMinutes', undefined, 3.5], 0], 
+        ['minute', undefined, 4.0, 60, 20, ['tenSeconds', undefined, 4.5], 0], 
+        ['second', undefined, 5.0, 60, 20, [], 0], 
+        ['millisecond', undefined, 6.0, 100, 5, [], 0]
     ]
 
     //Class Init
@@ -40,6 +40,7 @@
         this.dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
         this.dayNamesShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
         this.getDayName = function (i, b) { return b ? this.dayNamesShort[i] : this.dayNames[i] }
+        this.iterate7 = function (i, f) { return (i-f) % 7 == 0 }
         this.firstDayOfMonth = function (y, m) { return new Date((y||calendar.current.year) + "-" + (m||calendar.current.month) + "-" + 1).getDay() }
         this.daysInMonth = function (y, m) { return new Date((y||calendar.current.year), (m||calendar.current.month), 0).getDate() }
         // time in day
@@ -127,24 +128,29 @@
             this.next = Object.keys(this.frequencies)[this.total - this.phaseId + 1]
             this.nextFrequency = this.frequencies[this.next]
         }
-        
+        this.multipleScale = 10
         this.rephase = function (phase) {
             this.total = that.params.length
-            this.countMultipleTen = this.total * 10
+            this.multipleScalePhases = this.total * this.multipleScale
             var changePhase = 100 / this.total
             // generate phase parameters
             var subRephase = function (subPhase) {
                 if (!subPhase) return;
-                var spLen = subPhase.length/2
+                var spLen = subPhase.length/4
                 var spArray = {}
-                for (var sp = 0; sp < spLen; sp+=2) {
-                    spArray[subPhase[sp]] = {name: subPhase[sp], indice: subPhase[sp+1]}
+                for (var sp = 0; sp < spLen; sp+=4) {
+                    spArray[subPhase[sp]] = {name: subPhase[sp], labelNameList: subPhase[sp+1], indice: subPhase[sp+2], freq: subPhase[sp+3]}
                 }
                 return spArray
             }
-            var subReset = function () {
-                calendar.ctx.style.toggle.freqs.label.visibility = 'visible'
-                calendar.ctx.style.toggle.freqs.band.label.visibility = 'hidden' 
+            var subReset = function (reset) {
+                if (reset) {
+                    calendar.ctx.style.toggle.freqs.label.visibility = 'visible'
+                    calendar.ctx.style.toggle.freqs.band.label.visibility = 'hidden'
+                } else {
+                    calendar.ctx.style.toggle.freqs.label.visibility = 'hidden'
+                    calendar.ctx.style.toggle.freqs.band.label.visibility = 'visible'
+                }
             }
             var subCheck = function (p, sLen) {
                 if (calendar.ctx.style.toggle.freqs.label.visibility == 'visible') {
@@ -168,14 +174,29 @@
                 this.frequencies[that.params[p][0]] = {
                     name: that.params[p][0],
                     phase: this.total-p,
-                    indice: that.params[p][1],
-                    bands: isNaN(that.params[p][2]) ? this[that.params[p][2]] : that.params[p][2],
-                    span: that.params[p][3],
-                    sub: subRephase(that.params[p][4]),
+                    labelNameList: that.params[p][1],
+                    indice: that.params[p][2],
+                    _bands: isNaN(that.params[p][3]) ? this[that.params[p][3]] : that.params[p][3],
+                    get bands () {
+                        return typeof this._bands != 'function' ? this._bands : this._bands(this.year, this.month)
+                    },
+                    set bands (val) {
+                        return val
+                    },
+                    range: {},
+                    span: that.params[p][4],
+                    sub: subRephase(that.params[p][5]),
                     subCheck: subCheck,
                     subToggle: subToggle,
                     subReset: subReset,
-                    first: isNaN(that.params[p][5]) ? this[that.params[p][5]] : that.params[p][5],
+                    _first: isNaN(that.params[p][6]) ? this[that.params[p][6]] : that.params[p][6],
+                    get first () {
+                        return typeof this._first != 'function' ? this._first : this._first(this.year, this.month)
+                    },
+                    set first (val) {
+                        return val
+                    },
+                    startFunc: this.iterate7,
                     change: changePhase * (p + 1)
                 }
             }
