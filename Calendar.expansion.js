@@ -367,8 +367,8 @@
                 ranges.generate[pI] = frequencies[Object.keys(frequencies)[pI]].name
             }
             phases.refrequency(ranges.generate[phaseId])
-            debugger
-            expand.enter()
+            debugger //fix expand enter
+            //expand.enter()
             if (ranges.length != phaseId+1) {
                 ranges.length = phaseId+1
                 for (var rl = 0; rl < ranges.length; rl++) {
