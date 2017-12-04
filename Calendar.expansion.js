@@ -37,97 +37,89 @@
 
         //Public
         var expand = this.expand = {
-            percent: 0.0, offset: 0.0, value: 0.0, in: 0.0, out: 0.0, min: 0.0, max: 0.0, freq: {},
-            enter: function (exit) {
+            percent: 0.0, value: 0.0, widthValue: 0.0, in: 0.0, out: 0.0, min: 0.0, max: 0.0, freq: {min: 0.0, max: 0.0}, width: function (percent) {
+                this.percentValue = (this.out - this.in) * percent
+                this.widthValue = ((this.freq.max - this.freq.min) * percent) + this.widthValueSum
+                this.value = (this.in+this.percentValue) + this.valueSum
+            }, expandStack: [], widthValueSum: 0.0, valueSum: 0.0, percentile: 1.0,
+            enter: function (reverse) {
                 // assigning expand parameters
                 // assign freq to main expansion
-                // fix if current frequeny is day the bands = 32 
-                this.units = !exit ? phases.currentFrequency.bands : phases.previousFrequency.bands
+                if (reverse) {
+                    this.widthValueSum -= this.expandStack[this.expandStack.length - 1][0]
+                    this.valueSum -= this.expandStack[this.expandStack.length - 1][1]
+                    this.expandStack.pop()
+                } else {
+                    this.expandStack.push([expand.freq.min + (this.freq.max - this.freq.min), this.out])
+                    this.widthValueSum += this.expandStack[this.expandStack.length - 1][0]
+                    this.valueSum += this.expandStack[this.expandStack.length - 1][1]
+                }
 
-                this.freq.min = !exit ? phases.currentFrequency.span : phases.previousFrequency.span// previous.span / current.bands
-                this.freq.max = !exit ? phases.nextFrequency.bands * phases.nextFrequency.span : -(phases.currentFrequency.bands * phases.currentFrequency.span)
+                // year - month parameter change
+                this.units = phases.currentFrequency.bands // 8 - 12(year - month)
+                // 
+            
+                this.freq.min = phases.currentFrequency.span// 50 - 75(year - month)
 
-                this.freq.units = !exit ? phases.nextFrequency.bands : phases.currentFrequency.bands
+                this.freq.units = phases.nextFrequency.bands // 12 - 31(month - day)
 
-                this.min += !exit ? this.units * this.freq.min : -(this.units * this.freq.min)
-                this.max += !exit ? this.units * this.freq.max : -(this.units * this.freq.max)
+                this.freq.max = this.freq.units * phases.nextFrequency.span// (12x75)900 - + (31x50)1550 = 2450(month - day)
 
-                this.value = this.in += !exit ? 100 / this.units : -(100 / this.units)
-                this.out += !exit ? (100 / this.units) * (this.max / this.min) : -((100 / this.units) * (this.max / this.min))
+                this.min = this.units * this.freq.min// 400 - 7200
+                this.max = this.units * (this.freq.units * phases.nextFrequency.span)// 7200 - + 12×1500 = 23600
 
-                console.log('----------',this.value, this.in, this.out)
+                this.value = this.in = (100 / this.units)// 12.5 - 225
+                this.out = (100 / this.units) * (this.max / this.min)// 225
+                
+                console.log(JSON.stringify(this))
             }
         }
-        
-        this.expansion = function () {
-            _onexpansion = this.onexpansion = function (p) {
-                if (expand.percent+p < 0 || expand.percent+p > phases.multipleScalePhases) {
-                    return expand.percent/phases.multipleScale
-                }
-                expand.percent += p;
-                expand.percent = expand.percent < 0 
-                ? expand.percent = 0
-                : expand.percent > phases.multipleScalePhases 
-                ? expand.percent = phases.multipleScalePhases : expand.percent
 
-                var percent = expand.percent/phases.multipleScalePhases*phases.total
-                events.deltaX = mouse.x
-                var percentValue = (expand.out - expand.in) * percent
-                var widthValue = (expand.freq.max - expand.freq.min) * percent
-                //var CLpercent = events.deltaX/CL.clientWidth
+        TC.track._resize = function () {// only scale year frequency the rest will follow
+            var deltaScale = this.scale
+            this.scale = phases.frequencies.year ? (expand.value*phases.frequencies.year.bands) : 100
+            deltaScale = this.scale/deltaScale
+            expand.percentile /= deltaScale ? deltaScale : 1
+            this.width = TC.width * (this.scale / 100)
+            this.style.width = this.scale + '%'
+        }
+        window.resizeCalls.push(TC.track)
+        
+        TC.locator.left = 2
+        TC.locator.style.left = TC.locator.left+'%'
+        this.enter = function () {
+            _onexpansion = this.onexpansion = function (percent) {
                 if (expansion.centerFreq) TC.select = TC.children[expansion.centerFreq]
-                //var TC.percent = events.deltaX/(TC.clientWidth)
-                //console.log(deltaTCSelectLeft)
-                TC.percent = events.deltaX/(TC.clientWidth)
-                TC.spanPercent = TC.percent*expand.offset
+                events.deltaX = mouse.x
+                TC.locator.mouseX = events.deltaX/(TC.track.clientWidth)
+
                 if (TC.select) {
-                    var deltaTCSelectLeft = events.deltaX = TC.select.offsetLeft
-                    var left = TC.offsetLeft
-                    TC.percent = events.deltaX/(TC.clientWidth)
-                    TC.spanPercent = TC.percent*expand.offset
+                    TC.locator.mouseX = TC.select.offsetLeft/(TC.track.clientWidth)
                     TC.select.style.color = '#FFA218'
                 }
-                TC.locator.style.left = (TC.spanPercent*100)+'%'
-            
-                expand.value = (expand.in+percentValue)
-                expand.offset = expand.in/expand.value
-                style.main.freqs.width = expand.value+"%";
-                style.main.freqs.minWidth = Math.ceil(expand.freq.min+widthValue)+"px";
-                
-                // RESIZE -- re/assign offsets
+
                 TC.track._resize()
-                if (TC.select) {
-                    var TCSelectLeft = TC.select.offsetLeft
-                    left = TCSelectLeft > deltaTCSelectLeft ? (TCSelectLeft-deltaTCSelectLeft) : (deltaTCSelectLeft-TCSelectLeft)
-                    CL.locator.style.left = left+'px'
-                }
-                // RESIZE
-                //console.log('scale%: '+expand.percent+' TC.spanPercent: '+(TC.spanPercent*100))
                 
-                //console.log('left: '+this.leftRes+' osf: '+divRightRetract.offsetLeft)
+                TC.locator.style.left = TC.locator.mouseX*100+'%'
+                style.main.freqs.width = expand.value+"%";
+                
                 TC.style.left = (CL.locator.offsetLeft-TC.locator.offsetLeft)+'px'
-                //debugger
                 mouse.x = CL.locator.offsetLeft - (CL.offsetLeft+TC.offsetLeft) + CL.offsetLeft + container.scrollLeft
-                //console.log(CL.locator.offsetLeft-TC.locator.offsetLeft)
-                //widthValue = (expand.max - expand.min) * expand.percent
-                //TC.style.minWidth = Math.ceil(expand.min+widthValue)+'px'
                 return percent
             }
             this.expansionCalls = []
-            this.expansionCallbacks = function (p) {
+            this.expansionCallbacks = function (scroll) {
+                var percent = 0.0;
                 for (let e = 0; e < this.expansionCalls.length; e++) {
-                    if (this.expansionCalls[e]._expansion) this.expansionCalls[e]._expansion(p); else this.expansionCalls[e](p)
+                    if (this.expansionCalls[e]._expansion) percent = this.expansionCalls[e]._expansion(scroll); else percent = this.expansionCalls[e](scroll)
                 }
+                return percent
             }
-            this.onExpansion = function (p) {
-                this.expansionCallbacks(p)
+            this.onExpansion = function (scroll) {
+                return this.expansionCallbacks(scroll)
             }
             var zoom = function (zoom) {
-                if (zoom < 0) {
-                    expansion.onExpansion(expansion.onexpansion(-1))
-                } else {
-                    expansion.onExpansion(expansion.onexpansion(1))
-                }
+                expansion.onexpansion(expansion.onExpansion(zoom))
                 events._resize()
                 expansion.filter()
             }
@@ -142,16 +134,16 @@
             var outputStr = ''
             
             // filter calendar draws during scale
-            this.expandPercentStack = 0
-            this.offsetLeftStack = 0
-            this._deltaWidthRangeStack = undefined
+            this.expandPercentSum = 0
+            this.offsetLeftSum = 0
+            this.deltaWidthRangeSum = 0
             for (var r = 0; r < ranges.length; r++) {
                 var previous = this.current[r-1]
-                this.offsetLeftStack += previous ? previous.span.offsetLeft : 0
-                var TCLocatorOffsetLeft = TC.locator.offsetLeft - this.offsetLeftStack
+                this.offsetLeftSum += previous ? previous.span.offsetLeft : 0
+                var TCLocatorOffsetLeft = TC.locator.offsetLeft - this.offsetLeftSum
                 var frequency = phases.frequencies[ranges.generate[r]] || phases.currentFrequency
-                var widthRange = (this._deltaWidthRangeStack || TC.track.width) /frequency.bands
-                var _deltaWidthRange = this._deltaWidthRangeStack = widthRange
+                var widthRange = (this.deltaWidthRangeSum || TC.track.width) /frequency.bands
+                var deltaWidthRange = this.deltaWidthRangeSum = widthRange
 
                 var prevRangeGenerateName = ranges.generate[r-1]
                 var prevPhaseElements = phases.elements[prevRangeGenerateName]
@@ -166,22 +158,22 @@
 
                 if (range.tick == undefined) { range.tick = 0; /*continue;*/  }
 
-                range.expand = Math.floor(range.length - range.length/(phases.multipleScale/(expand.percent - this.expandPercentStack)))
-                this.expandPercentStack += phases.multipleScale
-                
-                range.expand = range.expand <= -1 ? -1 : range.expand >= range.length ? range.length : range.expand
-                
-                range.left = Math.floor(TCLocatorOffsetLeft / _deltaWidthRange) - range.expand
+                range.expand = Math.floor(range.length - range.length/(phases.multipleScale/(expand.percent - this.expandPercentSum)))
+                this.expandPercentSum += phases.multipleScale
 
-                range.locator = Math.floor(TCLocatorOffsetLeft / _deltaWidthRange)               
+                range.expand = range.expand <= -1 ? -1 : range.expand >= range.length ? range.length : range.expand
+
+                range.left = Math.floor(TCLocatorOffsetLeft / deltaWidthRange) - range.expand
+
+                range.locator = Math.floor(TCLocatorOffsetLeft / deltaWidthRange)               
                 
                 this.current[r] = range.list[Object.keys(range.list)[range.locator]]
                 outputStr += this.current[r] ? this.current[r].span.label.innerHTML+' ' : ''
                 this.current[r]
 
-                range.right = Math.floor(TCLocatorOffsetLeft  / _deltaWidthRange) + range.expand
+                range.right = Math.floor(TCLocatorOffsetLeft  / deltaWidthRange) + range.expand
                 
-                if (!_deltaWidthRange || range.left == range.tick) // optimize with tick
+                if (!deltaWidthRange || range.left == range.tick) // optimize with tick
                     continue;
                 range.tick = range.left
 
@@ -215,15 +207,18 @@
             if (outputStr || filterStr) ctx.output('Current '+outputStr+' - Filter Draw Range:'+filterStr)
         }
 
+        retract.leftOffset = 0.0
+        retract.rightRetract = 1.0
         events._resize = function () {
+            // moving the timeline
             // snapping
-            expansion.leftOffset < 0.01 ? expansion.leftOffset = 0.0 : expansion.leftOffset > 0.95 ? expansion.leftOffset = 0.95 : expansion.leftOffset
-            expansion.rightRetract + expansion.leftOffset > 0.98 ? expansion.rightRetract = 1.0 - expansion.leftOffset : expansion.rightRetract < 0.05 ? expansion.rightRetract = 0.05 : expansion.rightRetract
+            retract.leftOffset < 0.01 ? retract.leftOffset = 0.0 : retract.leftOffset > 0.95 ? retract.leftOffset = 0.95 : retract.leftOffset
+            retract.rightRetract + retract.leftOffset > 0.98 ? retract.rightRetract = 1.0 - retract.leftOffset : retract.rightRetract < 0.05 ? retract.rightRetract = 0.05 : retract.rightRetract
     
-            // retracting
+            // retract
             container.width = container.clientWidth || app.width
-            expansion.width = (container.width * expansion.rightRetract)
-            TC.width = expansion.width < expand.min ? expand.min : expansion.width > expand.max ? expand.max : expansion.width
+            retract.width = Math.ceil(container.width * retract.rightRetract)
+            TC.width = retract.width < expand.min ? expand.min - 10 : retract.width > expand.max ? expand.max - 10 : retract.width - 10
             //expansion.TC.width -= phases.multipleScale
             TC.left = TC.offsetLeft
     
@@ -231,8 +226,8 @@
             // RESIZE -- re/assign offsets - delta
             var deltaTCLocatorLeft = TC.locator.offsetLeft
             
-            CL.style.left = (expansion.leftOffset * container.width) + 'px'
-            CL.style.width = expansion.width + 'px'
+            CL.style.left = (retract.leftOffset * container.width) + 'px'
+            CL.style.width = retract.width + 'px'
             TL.style.width = container.width + 'px'
             
             TC.style.width = TC.width + 'px'
@@ -242,7 +237,7 @@
             TC.left += (deltaTCLocatorLeft-TCLocatorLeft)
             var leftRes = (TCLocatorLeft+TC.left)
             //console.log('left: '+expansion.leftRes+' osf: '+divRightRetract.offsetLeft)
-            if (expansion.width > 100) {
+            if (retract.width > 100) {
                 TC.left -= CL.retract.right.offsetLeft-50 < leftRes ? (leftRes-CL.retract.right.offsetLeft)+50 : 0
     
                 TC.left -= CL.retract.left.offsetLeft+50 > leftRes ? (leftRes-CL.retract.left.offsetLeft)-50 : 0
@@ -251,10 +246,10 @@
             TC.style.left = TC.left+'px'
     
             // ADJUSTMENTS - TODO Add easing
-            if (TC.offsetLeft+TC.track.clientWidth < CL.clientWidth) {
+            if (TC.offsetLeft+TC.track.clientWidth < (CL.clientWidth - 10)) {
                 TC.style.left = '5px'
             }
-            if (TC.track.clientWidth == (CL.clientWidth)) {
+            if (TC.track.clientWidth == (CL.clientWidth - 10)) {
                 TC.style.left = '5px'
             }
             TC.leftTCScroll = TC.offsetLeft
@@ -273,7 +268,7 @@
             CL.locator.style.left = (CL.percent*100)+'%'
     
             events.deltaX = e.pageX - (CL.offsetLeft+TC.offsetLeft) + container.scrollLeft
-            TC.percent = (events.deltaX/(TC.clientWidth))*expand.offset
+            TC.percent = (events.deltaX/(TC.clientWidth))*expand.percentile
             //mouse move filter* TC.locator.style.left = (TC.percent*100)+'%'
     
             // center
@@ -281,7 +276,7 @@
             TC.centerPercent = events.deltaCenterX/(TC.clientWidth)
             //TC.locator.style.left = (TC.centerPercent*100)+'%'
             // 0.07035755478662054 .......
-            TC.spanPercent = TC.percent*expand.offset
+            TC.spanPercent = TC.percent*expand.percentile
             //console.clear()
             // TC.spanPercent GOOD FOR TIMESTAMP INSERT RE/POSITIONING, end to end
             //console.log('calendar%:'+CL.percent+' - timecode%:'+TC.percent+' - timespan%:'+TC.spanPercent+' - centerspan%:'+TC.centerPercent)
@@ -322,42 +317,47 @@
                     }, 10)
                 }
             } else if (retract.mode == 'left') {
-                expansion.leftOffset = events.mouseX / container.width
-                var constrict = (events.mouseX + expansion.width) / container.width
+                retract.leftOffset = events.mouseX / container.width
+                var constrict = (events.mouseX + retract.width) / container.width
                 if (constrict > 1)
-                    expansion.rightRetract -= (events.mouseX + expansion.width) / container.width - 1
+                    retract.rightRetract -= (events.mouseX + retract.width) / container.width - 1
                     events._resize()
             } else if (retract.mode == 'right') {
-                expansion.rightRetract = (events.mouseX - (expansion.leftOffset * container.width)) / container.width
+                retract.rightRetract = (events.mouseX - (retract.leftOffset * container.width)) / container.width
                 events._resize()
             }
             //
             expansion.filter()
         }
 
-        this.leftOffset = 0.0
-        this.rightRetract = 1.0
-        TC.track._resize = function () {// only scale year frequency the rest will follow
-            this.scale = phases.frequencies.year ? (expand.value*phases.frequencies.year.bands) : 100
-            this.width = TC.width * (this.scale / 100)
-            this.style.width = this.scale + '%'
-        }
-        window.resizeCalls.push(TC.track)
         this._resize = function () {
             this.filter()
         }
         window.resizeCalls.push(this)
-        expand.enter()
-        this.handle = this.expansion()
+        expand.enter(false)
+        this.handle = this.enter()
         Wheel(CL.track, this.handle)
-        var phaseChange = function (p) {
-            var phaseId = p << 0
+        var phaseChange = function (scroll) {
+            if (expand.percent+scroll < 0 || expand.percent+scroll > phases.multipleScalePhases) {
+                return (expand.percent/phases.multipleScale) % 1
+            }
+            expand.percent += scroll;
+            expand.percent = expand.percent < 0 
+            ? expand.percent = 0
+            : expand.percent > phases.multipleScalePhases 
+            ? expand.percent = phases.multipleScalePhases : expand.percent
+
+            var percent = expand.percent/phases.multipleScalePhases*phases.total
+            phases.percent = percent % 1
+            expand.width(phases.percent)
+            
+            var phaseId = percent << 0
             for (var sLen = 0; sLen < phases.currentFrequency.subLength; sLen++) {
-                phases.currentFrequency.subCheck(p, sLen)
-                    console.log(p)
+                phases.currentFrequency.subCheck(percent, sLen)
+                    console.log('Expand: '+percent)
             }
             if (phases.phaseId == phases.total - phaseId)
-                return;
+                return phases.percent;
             
             var reset = typeof ranges.phaseId == 'undefined' || ranges.phaseId < phaseId
             ranges.phaseId = phaseId
@@ -367,8 +367,10 @@
                 ranges.generate[pI] = frequencies[Object.keys(frequencies)[pI]].name
             }
             phases.refrequency(ranges.generate[phaseId])
-            debugger //fix expand enter
-            //expand.enter()
+
+            expand.enter(!reset)
+            expand.width(phases.percent)
+
             if (ranges.length != phaseId+1) {
                 ranges.length = phaseId+1
                 for (var rl = 0; rl < ranges.length; rl++) {
@@ -382,8 +384,9 @@
                     generate.reset(ranges.generate[ranges.length-1], range.start, range.end, reset)
                 }
             }
+            return phases.percent
         }
         this.expansionCalls.push(phaseChange)
-        this.onExpansion(this.onexpansion(0.0))
+        this.onexpansion(this.onExpansion(0.0))
     }
 })(this.Calendar)
