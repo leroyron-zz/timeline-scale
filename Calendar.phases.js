@@ -36,6 +36,7 @@
         this.monthNamesShort = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
         this.getMonthName = function (i, b) { return b ? this.monthNamesShort[i] : this.monthNames[i] }
         this.weeksInMonth = function (y, m) {Math.ceil((firstDayOfMonth(y, m)+daysInMonth(y, m)) / 7)}
+        this.weekNames = ['Week1','Week2','Week3','Week4','Week5']
         // month <> days
         this.dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
         this.dayNamesShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
