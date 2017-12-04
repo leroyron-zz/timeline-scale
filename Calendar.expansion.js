@@ -179,6 +179,7 @@
 
                 if(range.expand == 0) {
                     console.log('Enter '+frequency.name+' '+this.current[r].span.label.innerHTML)
+                    mouse.x = CL.locator.offsetLeft - (CL.offsetLeft+TC.offsetLeft) + CL.offsetLeft + container.scrollLeft
                 }
                 if (this.current[r]) { 
                     console.log('@ '+this.current[r].span.label.innerHTML);
@@ -192,6 +193,10 @@
                 range.start = range.start < 0 ? 0 : range.start
                 range.end = range.right + 1
                 range.end = range.end > range.length - 1 ? range.length - 1 : range.end
+                if (range.start == range.end) {
+                    range.start-=1 
+                    range.end+=1
+                }
                 
                 this.start = range.list[Object.keys(range.list)[range.start]]
                 
@@ -381,7 +386,7 @@
                 
                 if (range) {
                     range.tick = 'reset'
-                    generate.reset(ranges.generate[ranges.length-1], range.start, range.end, reset)
+                    generate.reset(ranges.generate[ranges.length-1], !reset, range.start, range.end, reset)
                 }
             }
             return phases.percent

@@ -123,6 +123,7 @@
                 for (var si = 0; si < skLen; si++) {
                     var subFrequencyName = Object.keys(frequency.sub)[si]
                     var subFrequency = frequency.sub[subFrequencyName]
+                    if (!container.enter) element[subFrequencyName] = undefined
                     this[subFrequencyName](calendar, element, subFrequencyName, nfFirst, nbLen, subFrequency.freq, calendar.phases[subFrequency.labelNameList])                
                 }
             }
@@ -140,8 +141,9 @@
             // subphase when expansion reaches a certain percent
             var parent = element
             var child = parent[name] = { enter: true, list: {}}
+            var l = 0
             for (var i=first; i<iterate; i+=subFreq) {
-                var label = subLabel[i/subFreq]
+                var label = subLabel[l]
                 var element = child.list[label] = { enter: true, list: {}}
 
                 var elemFreqSpanBandLabel = document.createElement('label')
@@ -149,6 +151,7 @@
                 parent.span.band.children[i].setAttribute('class', 'first')
                 parent.span.band.children[i].appendChild(elemFreqSpanBandLabel)
                 element.label = elemFreqSpanBandLabel
+                l++
             }
             return parent
         },
@@ -158,9 +161,10 @@
             var previousElementList = previousFrequency.element.list
             var nextFrequency = calendar.phases.nextFrequency
 
-            var container = frequency.element
-            if (!container.enter) { calendar.ctx.execStyle(frequency, [27, 28, 29, 30, 31, 32]);  calendar.ctx.style.toggle = calendar.ctx.style[frequency.name]  }            
-            container.enter = typeof container.enter == 'undefined' ? true : container.enter
+            var control = frequency.element
+            if (!control.init) { calendar.ctx.execStyle(frequency, [27, 28, 29, 30, 31, 32]);  calendar.ctx.style.toggle = calendar.ctx.style[frequency.name]  }
+            control.init = true     
+            control.enter = typeof control.enter == 'undefined' ? true : control.enter
 
             var s = start + this.pad.left
             var e = end + this.pad.right
@@ -182,7 +186,7 @@
 
                 if (filter && !result) continue;
 
-                var container = previous[frequency.name] = {}
+                var container = previous[frequency.name] = typeof previous[frequency.name] == 'undefined' ? {} : previous[frequency.name]
                 container.list = typeof container.list == 'undefined' ? {} : container.list
                 container.enter = typeof container.enter == 'undefined' ? previous.enter : container.enter
 
@@ -278,10 +282,10 @@
                         element.dead = false
                     }
 
-                    if (element.enter || f <= s || f >= e) continue;
-                    console.log('regen: ' + Object.keys(container.list)[f], element.enter, 'Empty: '+empty+' Dead: '+element.dead)
+                    if (control.enter && (element.enter || f <= s || f >= e)) continue;
+                    console.log('regen: '+previousKey +' '+ Object.keys(container.list)[f], element.enter, 'Empty: '+empty+' Dead: '+element.dead)
     
-                    if (!element.list) {
+                    if (!element.list || !control.enter) {
                         element.enter = true
                         element.list = {}
                         var elemFreqSpan = document.createElement('span')
@@ -335,10 +339,12 @@
                     for (var si = 0; si < skLen; si++) {
                         var subFrequencyName = Object.keys(frequency.sub)[si]
                         var subFrequency = frequency.sub[subFrequencyName]
+                        if (!control.enter) element[subFrequencyName] = undefined
                         this[subFrequencyName](calendar, element, subFrequencyName, nfFirst, nbLen, subFrequency.freq, calendar.phases[subFrequency.labelNameList])                
                     }
                 }
             }
+            control.enter = true
             return container
         },
         week: function week(calendar, element, name, first, iterate, subFreq, subLabel) {
@@ -353,15 +359,17 @@
             // subphase when expansion reaches a certain percent
             var parent = element
             var child = parent[name] = { enter: true, list: {}}
+            var l = 0
             for (var i=first; i<iterate; i+=subFreq) {
-                var label = subLabel[i]
+                var label = subLabel[l]
                 var element = child.list[label] = { enter: true, list: {}}
 
                 var elemFreqSpanBandLabel = document.createElement('label')
-                elemFreqSpanBandLabel.innerHTML = i == first ? parent.span.label.innerHTML+'-'+label : label
+                elemFreqSpanBandLabel.innerHTML = i == first ? label : label
                 parent.span.band.children[i].setAttribute('class', 'first')
                 parent.span.band.children[i].appendChild(elemFreqSpanBandLabel)
                 element.label = elemFreqSpanBandLabel
+                l++
             }
             return parent
         },
@@ -505,7 +513,7 @@
             var e = end + this.pad.right
             for (var f = 0; f < frequency.bands; f++) {
                 var element = container.list[Object.keys(container.list)[f]]
-                if (!element.enter || f > s && f < e) continue;
+                if (element.dead || !element.enter || f > s && f < e) continue;
                 element.enter = false
                 if (empty)
                     element.span.innerHTML = ''
@@ -637,7 +645,7 @@
         },
         this.degen = function (_current, rangeStart, rangeEnd, empty) {
             var _current = _current || calendar.phases.current  
-            frequency = calendar.phases.frequencies[_current] ? calendar.phases.frequencies[_current] : frequency
+            var frequency = calendar.phases.frequencies[_current] ? calendar.phases.frequencies[_current] : frequency
             frequency.element = frequency.element ? frequency.element : {}
             calendar.phases.elements = calendar.phases.elements ? calendar.phases.elements : {}
             calendar.phases.elements[frequency.name] = calendar.phases.elements[frequency.name] ? calendar.phases.elements[frequency.name] : frequency.element 
@@ -654,9 +662,9 @@
         }
         this.regen()
         this.pad = {left: -1, right: 1}
-        this.reset = function (_current, start, end, subReset) {
+        this.reset = function (_current, _next, start, end, subReset) {
             var _current = _current || calendar.phases.current  
-            frequency = calendar.phases.frequencies[_current] ? calendar.phases.frequencies[_current] : frequency
+            var frequency = calendar.phases.frequencies[_current] ? calendar.phases.frequencies[_current] : frequency
             /*var container = frequency.element
             container.enter = true
             var s = start + this.pad.left
@@ -680,6 +688,11 @@
             }*/
             calendar.ctx.style.toggle = calendar.ctx.style[frequency.name]
             frequency.subReset(subReset)
+
+            if (!_next) return
+                var nextFrequency = calendar.phases.nextFrequency
+                var container = nextFrequency.element
+                container.enter = false
         }
     }
 })(this.Calendar)
