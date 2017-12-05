@@ -39,37 +39,46 @@
         var expand = this.expand = {
             percent: 0.0, value: 0.0, widthValue: 0.0, in: 0.0, out: 0.0, min: 0.0, max: 0.0, freq: {min: 0.0, max: 0.0}, width: function (percent) {
                 this.percentValue = (this.out - this.in) * percent
-                this.widthValue = ((this.freq.max - this.freq.min) * percent) + this.widthValueSum
-                this.value = (this.in+this.percentValue) + this.valueSum
-            }, expandStack: [], widthValueSum: 0.0, valueSum: 0.0, percentile: 1.0,
+                this.widthValue = (this.freq.max - this.freq.min) * percent
+                this.value = this.in+this.percentValue
+            }, unitStack: [phases.currentFrequency.bands], unitMultiple: phases.currentFrequency.bands,  percentile: 1.0,
             enter: function (reverse) {
                 // assigning expand parameters
                 // assign freq to main expansion
-                if (reverse) {
-                    this.widthValueSum -= this.expandStack[this.expandStack.length - 1][0]
-                    this.valueSum -= this.expandStack[this.expandStack.length - 1][1]
-                    this.expandStack.pop()
-                } else {
-                    this.expandStack.push([expand.freq.min + (this.freq.max - this.freq.min), this.out])
-                    this.widthValueSum += this.expandStack[this.expandStack.length - 1][0]
-                    this.valueSum += this.expandStack[this.expandStack.length - 1][1]
-                }
-
                 // year - month parameter change
-                this.units = phases.currentFrequency.bands // 8 - 12(year - month)
-                // 
+                this.units = phases.currentFrequency.bands
+                this.nextUnits = phases.nextFrequency.bands 
+                // 8 - 12(year - month)
+                if (reverse) {
+                    this.unitMultiple /= this.unitStack[this.unitStack.length - 1]
+                    this.unitStack.pop()
+                    this.deltaUnitMultiple /= this.unitStack[this.unitStack.length - 1]
+                } else {
+                    this.unitStack.push(this.nextUnits)
+                    this.deltaUnitMultiple = this.unitMultiple
+                    this.unitMultiple *= this.unitStack[this.unitStack.length - 1]
+                }
             
-                this.freq.min = phases.currentFrequency.span// 50 - 75(year - month)
+                this.freq.min = phases.currentFrequency.span
+                // 50 - 75(year - month)
 
-                this.freq.units = phases.nextFrequency.bands // 12 - 31(month - day)
+                this.freq.units = phases.nextFrequency.bands 
+                // 12 - 31(month - day)
 
-                this.freq.max = this.freq.units * phases.nextFrequency.span// (12x75)900 - + (31x50)1550 = 2450(month - day)
+                this.freq.max = this.freq.units * phases.nextFrequency.span
+                // (12x75)900 - + (31x50)1550 = 2450(month - day)
 
-                this.min = this.units * this.freq.min// 400 - 7200
-                this.max = this.units * (this.freq.units * phases.nextFrequency.span)// 7200 - + 12×1500 = 23600
+                this.min = this.deltaUnitMultiple * this.freq.min
+                // 400 - 7200
 
-                this.value = this.in = (100 / this.units)// 12.5 - 225
-                this.out = (100 / this.units) * (this.max / this.min)// 225
+                this.max = this.unitMultiple * phases.nextFrequency.span
+                // 7200 - + 12×1500 = 23600
+
+                this.value = this.in = (100 / this.units)
+                // 12.5 - 225
+                
+                this.out = (100 / this.units) * (this.max / this.min)
+                // 225
                 
                 console.log(JSON.stringify(this))
             }
@@ -354,12 +363,13 @@
 
             var percent = expand.percent/phases.multipleScalePhases*phases.total
             phases.percent = percent % 1
+            phases.percent = percent != 0 && phases.percent == 0 ? 0.09 : phases.percent
             expand.width(phases.percent)
             
             var phaseId = percent << 0
             for (var sLen = 0; sLen < phases.currentFrequency.subLength; sLen++) {
                 phases.currentFrequency.subCheck(percent, sLen)
-                    console.log('Expand: '+percent)
+                    console.log('Expand: '+percent, phases.percent)
             }
             if (phases.phaseId == phases.total - phaseId)
                 return phases.percent;
