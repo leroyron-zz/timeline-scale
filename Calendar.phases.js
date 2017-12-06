@@ -200,6 +200,7 @@
                     startFunc: this.iterate7,
                     change: changePhase * (p + 1)
                 }
+                if (p == 0) this.mainFrequency = this.frequencies[that.params[p][0]]
             }
             this.refrequency(phase)
         }
