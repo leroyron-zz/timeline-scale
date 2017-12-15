@@ -8,6 +8,7 @@
 <script src="Wheel.js" type="text/javascript"></script>
 <script src="Calendar.js" type="text/javascript"></script>
 <script src="Calendar.ctx.js" type="text/javascript"></script>
+<script src="Calendar.stack.js" type="text/javascript"></script>
 <script src="Calendar.phases.js" type="text/javascript"></script>
 <script src="Calendar.events.js" type="text/javascript"></script>
 <script src="Calendar.generate.js" type="text/javascript"></script>

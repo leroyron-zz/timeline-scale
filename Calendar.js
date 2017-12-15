@@ -17,6 +17,7 @@ var Calendar = Calendar || function (container, phase, x, y, width, height, curr
     
     //Class Declarations
     this.ctx = new this.ctx.Init(this, container, x, y, width, height)
+    this.stack = new this.stack.Init(this)
     this.events = new this.events.Init(this)
     this.phases = new this.phases.Init(this, phase)
     this.generate = new this.generate.Init(this, current)
