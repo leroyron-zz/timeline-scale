@@ -30,6 +30,7 @@
         var dragScroll = events.dragScroll
 
         var generate = calendar.generate
+        var stack = calendar.stack
         
         var expansion = this
 
@@ -148,20 +149,20 @@
             this.deltaWidthRangeSum = 0
             for (var r = 0; r < ranges.length; r++) {
                 var previous = this.current[r-1]
-                this.offsetLeftSum += previous ? previous.span.offsetLeft : 0
+                this.offsetLeftSum += previous ? previous[1].span.offsetLeft : 0
                 var TCLocatorOffsetLeft = TC.locator.offsetLeft - this.offsetLeftSum
                 var frequency = phases.frequencies[ranges.generate[r]] || phases.currentFrequency
                 var widthRange = (this.deltaWidthRangeSum || TC.track.width) /frequency.bands
                 var deltaWidthRange = this.deltaWidthRangeSum = widthRange
 
                 var prevRangeGenerateName = ranges.generate[r-1]
-                var prevPhaseElements = phases.elements[prevRangeGenerateName]
+                var prevPhaseElements = stack[prevRangeGenerateName]
 
                 var range = frequency.range = this.ranges[frequency.name] ? this.ranges[frequency.name] : 
                 this.ranges[frequency.name] = {   // new range finder
-                    elements: phases.elements[frequency.name] || (phases.elements[frequency.name] = generate.regen(frequency.name)),
-                    list:  previous ? previous[frequency.name].list : phases.elements[frequency.name].list,
-                    length: previous ? Object.keys(previous[frequency.name].list).length : Object.keys(phases.elements[frequency.name].list).length,
+                    elements: stack[frequency.name] || (stack[frequency.name] = generate.regen(frequency.name)),
+                    list: previous ? previous[2] : stack[frequency.name].list,
+                    length: previous ? Object.keys(previous[2]).length : Object.keys(stack[frequency.name].list).length,
                     tick: undefined
                 }
 
@@ -177,7 +178,7 @@
                 range.locator = Math.floor(TCLocatorOffsetLeft / deltaWidthRange)               
                 
                 this.current[r] = range.list[Object.keys(range.list)[range.locator]]
-                outputStr += this.current[r] ? this.current[r].span.label.innerHTML+' ' : ''
+                outputStr += this.current[r] ? this.current[r][0]+' ' : ''
                 this.current[r]
 
                 range.right = Math.floor(TCLocatorOffsetLeft  / deltaWidthRange) + range.expand
@@ -187,11 +188,11 @@
                 range.tick = range.left
 
                 if(range.expand == 0) {
-                    console.log('Enter '+frequency.name+' '+this.current[r].span.label.innerHTML)
+                    console.log('Enter '+frequency.name+' '+(this.current[r] ? this.current[r][0] : ''))
                     mouse.x = CL.locator.offsetLeft - (CL.offsetLeft+TC.offsetLeft) + CL.offsetLeft + container.scrollLeft
                 }
                 if (this.current[r]) { 
-                    console.log('@ '+this.current[r].span.label.innerHTML);
+                    console.log('@ '+this.current[r][0]);
                 }
 
                 range.left = range.left < 0 ? 0 : range.left > range.length - 1 ? range.length - 1 : range.left
@@ -214,7 +215,7 @@
                 if (r == 0 || range.expand <= 0) {
                     generate.degen(frequency.name, range.start, range.end,  ranges.length != r+1)
                     generate.regen(frequency.name, range.start, range.end,  ranges.length != r+1)
-                    filterStr = this.start.span.label.innerHTML+' '+ this.end.span.label.innerHTML
+                    filterStr = this.start[0]+' '+ this.end[0]
                 }
                 
             }
