@@ -9,7 +9,7 @@
     //Class Declarations
     
     //Private
-    var general = function (calendar, deltaFrequency, start, end, empty, filter) {
+    var general = function (calendar, deltaFrequency, start, end, empty, streamline, filter, dataOnly) {
         this.output = []
         var frequencies = calendar.phases.frequencies
         var mainFrequency = calendar.phases.mainFrequency
@@ -44,6 +44,7 @@
 
         var s = start + this.pad.left
         var e = end + this.pad.right
+
         // days and hours problem to solve 
         //previousFrequency[previousFrequency.name] = Object.keys(previousElementList)[p]/* [p] this will run into error, must be in loop*/
         //previousFrequency[deltaFrequency.name] = calendar.phases[deltaFrequency.labelNameList].indexOf(label)+1/* (label) this will run into error, no label*/
@@ -51,6 +52,106 @@
         var pbLen = previousFrequency.bands
         var cbLen = deltaFrequency.bands
         var nbLen = nextFrequency.bands
+
+        var streamlineEnter = typeof streamline != 'undefined'
+        if (streamline) {
+            var locatorMid = Math.ceil(deltaFrequency.range.locator / deltaFrequency.bands)
+            locatorMid = locatorMid < 1 ? 1 : locatorMid > previousFrequency.bands-1 ? previousFrequency.bands-1 : locatorMid
+            var first = (locatorMid - 1) * deltaFrequency.bands
+            var length = (locatorMid + 1) * deltaFrequency.bands
+
+            // --month and year assign for first day (nextFrequency.first) of month and amount of days in month (nextFrequency.bands)
+            for (var f = first; f < length; f++) {
+                // days and hours problem to solve 
+                // Todo - For Calendar Days shifting p++ and pbLen required
+                // --month and year assign for first day (nextFrequency.first) of month and amount of days in month (nextFrequency.bands)
+                
+
+                var label = !deltaFrequency.labelNameListIsFunction ? calendar.phases[deltaFrequency.labelNameList][f%deltaFrequency.bands] : deltaFrequency.labelNameList()
+                var element = control.list[f][1]
+                if (nextFrequency.name == 'day') nextFrequency.year = element.parent[0]
+                if (nextFrequency.name == 'day') {nextFrequency.month = calendar.phases[deltaFrequency.labelNameList].indexOf(control.list[f][0])+1
+                nbLen = nextFrequency.bands}
+
+                if (element.dead) {
+                    var elemFreqSpan = element.span
+                    var elemFreqSpanBandDiv = element.span.band
+                    // create year frequencies keep current year in center of timecode
+                    var elemFreqSpanLabel = document.createElement('label')
+                    elemFreqSpanLabel.innerHTML = label
+                    elemFreqSpan.appendChild(elemFreqSpanLabel)
+                    element.span.label = elemFreqSpanLabel
+
+                    // create bands for the year frequencies
+                    var elemFreqSpanBandDiv = document.createElement('div')
+                    var bandClassName = deltaFrequency.bandWidthsIsFunction ? deltaFrequency.bandClassName + nbLen : deltaFrequency.bandClassName
+                    elemFreqSpanBandDiv.setAttribute('class', bandClassName)
+                    element.span.band = elemFreqSpanBandDiv
+                    element.dead = false
+                }
+
+                if (element.enter || f <= s || f >= e) continue;
+                this.output.push(control.list[f][0])
+
+                if (!element.list) {
+                    element.enter = true
+                    element.list = element.list || {}
+                    var elemFreqSpan = document.createElement('span')
+                    elemFreqSpan.setAttribute('class', 'span freq ' + deltaFrequency.name)
+                    element.span = elemFreqSpan
+
+                    // create year frequencies keep current year in center of timecode
+                    var elemFreqSpanLabel = document.createElement('label')
+                    elemFreqSpanLabel.innerHTML = label
+                    elemFreqSpan.appendChild(elemFreqSpanLabel)
+                    element.span.label = elemFreqSpanLabel
+
+                    // create bands for the year frequencies
+                    // dynamic scale
+
+                    var elemFreqSpanBandDiv = document.createElement('div')
+                    var bandClassName = deltaFrequency.bandWidthsIsFunction ? deltaFrequency.bandClassName + nbLen : deltaFrequency.bandClassName
+                    elemFreqSpanBandDiv.setAttribute('class', bandClassName)
+                    element.span.band = elemFreqSpanBandDiv
+                    //
+                    element.parent[1].span.appendChild(elemFreqSpan)
+                } else {
+                    element.enter = true
+                    var elemFreqSpan = element.span
+                    var elemFreqSpanBandDiv = element.span.band
+                }
+
+                // next frequency bands * calander days function
+                var nfFirst = nextFrequency.first
+                var startFunc = nextFrequency.startFunc
+                var wait = false
+                for (var b = elemFreqSpanBandDiv.children.length; b < nbLen; b++) {
+                    var elemFreqSpanBandDivUnit = document.createElement('div')
+                    if (b == 0)
+                        elemFreqSpanBandDivUnit.setAttribute('class', 'first')
+                    elemFreqSpanBandDiv.appendChild(elemFreqSpanBandDivUnit)
+                    continue
+                    var elemFreqSpanBandDivUnit = document.createElement('div')
+                    var start = startFunc(b, nfFirst)
+                    if (!wait) wait = start
+                    if (startFunc(b, nfFirst) && b != 0)
+                        elemFreqSpanBandDivUnit.setAttribute('class', 'start'); else if (b == 0) elemFreqSpanBandDivUnit.setAttribute('class', 'first');// else if (!wait) elemFreqSpanBandDivUnit.setAttribute('class', 'wait'); 
+                    elemFreqSpanBandDiv.appendChild(elemFreqSpanBandDivUnit)
+                }
+                elemFreqSpan.appendChild(elemFreqSpanBandDiv)
+
+                var skLen = Object.keys(deltaFrequency.sub).length
+                for (var si = 0; si < skLen; si++) {
+                    var subFrequencyName = Object.keys(deltaFrequency.sub)[si]
+                    var subFrequency = deltaFrequency.sub[subFrequencyName]
+                    element[subFrequencyName] = undefined
+                    this[subFrequencyName](calendar, element, subFrequencyName, nfFirst, nbLen, subFrequency.freq, calendar.phases[subFrequency.labelNameList])
+                }
+            }
+            if (this.output.length > 0) console.log('Regen: '+JSON.stringify(this.output))
+            return control
+        }
+        
 
         if (control.empty != empty) {
             if (empty) {
@@ -90,8 +191,8 @@
                 filter.push(elementLabel)
 
             }
-            this[nextFrequencyName](calendar, nextFrequency, nextFrequency.range.start, nextFrequency.range.end, nextFrequency.element.empty, filter)
-            return
+            this[nextFrequencyName](calendar, nextFrequency, undefined, undefined, nextFrequency.element.empty, streamline, filter, streamlineEnter)
+            return control
         }
         var fLen = filter ? filter.length : 0
         var result = undefined
@@ -100,62 +201,60 @@
         
         for (var p = 0; p < pbLen; p++) {// days and hours problem to solve 
             // Todo - For Calendar Days shifting p++ and pbLen required
-            var previous = previousFrequency.element.list[p] || {}//
-            var previousElement = previous[1] || {}
-            var previousLabel = previous[0]
+            var parent = previousFrequency.element.list[p] || {}//
+            var parentElement = parent[1] || {}
+            var parentLabel = parent[0]
             // previousFrequency[previousFrequency.name] = previousLabel
             
             var result = undefined
             if (filter) // skip if deltaFrequency not in filter
                 for (var fl = 0; fl < fLen; fl++)
-                    result = (result || previousLabel == filter[fl])
+                    result = (result || parentLabel == filter[fl])
 
             if (filter && !result) continue;
 
             
-            previous[2] = previousElement.list || {}            
-            container = previousElement
+            parent[2] = parentElement.list || {}            
+            container = parentElement
             container.list = container.list || {}
-            container.enter = container.enter || previous.enter
+            container.enter = container.enter || parent.enter
 
-            // control list is constant changing 
-            if (filter) control.list = container.list
-            
-
-            // days and hours problem to solve 
-            //deltaFrequency[previousFrequency.name] = previousLabel
-            //deltaFrequency[deltaFrequency.name] = calendar.phases[deltaFrequency.labelNameList].indexOf(label)+1/* (label) this will run into error, no label*/
-            
             var fbLen = deltaFrequency.bands
             var fFirst = deltaFrequency.first
 
-            //calendar.ctx.TC.innerHTML = ''// if there's no previous element span container timecode must be clear and used
-            var previousSpan = previousElement.span || calendar.ctx.TC // used
-            var ffirst = previousSpan.children.length
-            if (!previousElement.span && mainIsCurrent) {
-                container = previousElement = mainFrequency.element
-                ffirst = 0
+            // days and hours problem to solve 
+            //deltaFrequency[previousFrequency.name] = parentLabel
+            //deltaFrequency[deltaFrequency.name] = calendar.phases[deltaFrequency.labelNameList].indexOf(label)+1/* (label) this will run into error, no label*/
+
+            //calendar.ctx.TC.innerHTML = ''// if there's no parent element span container timecode must be clear and used
+            var parentSpan = parentElement.span || calendar.ctx.TC // used
+            var fChildSpan = parentSpan.children.length
+            if (!parentElement.span && mainIsCurrent) {
+                container = parentElement = mainFrequency.element
+                fChildSpan = 0
             }
 
-            if (!previousElement.enter) // need to check into cases for every phase
+            if (!parentElement.enter) // need to check into cases for every phase
                 continue
 
-            if (previousLabel) this.output.push('>> '+previousLabel)
+            if (parentLabel) this.output.push('>> '+parentLabel)
 
             // --month and year assign for first day (nextFrequency.first) of month and amount of days in month (nextFrequency.bands)
-            if (nextFrequency.name == 'day') nextFrequency.year = previousLabel
-            for (var f = ffirst; f < fbLen; f++) {// days and hours problem to solve 
-                // Todo - For Calendar Days shifting p++ and pbLen required
-                // --month and year assign for first day (nextFrequency.first) of month and amount of days in month (nextFrequency.bands)
-                if (nextFrequency.name == 'day') nextFrequency.month = f+1
-                nbLen = nextFrequency.bands
-
+            if (nextFrequency.name == 'day') nextFrequency.year = parentLabel
+            container.list.length = fbLen
+            for (var f = fChildSpan; f < fbLen; f++) {// days and hours problem to solve 
+                
                 var label = !deltaFrequency.labelNameListIsFunction ? calendar.phases[deltaFrequency.labelNameList][f] : deltaFrequency.labelNameList() 
                 container.list[f] = container.list[f] || [
                     label, 
-                    {dead: false}
+                    {dead: false, parent: parent}
                 ]
                 var element = container.list[f][1]
+
+                // Todo - For Calendar Days shifting p++ and pbLen required
+                // --month and year assign for first day (nextFrequency.first) of month and amount of days in month (nextFrequency.bands)
+                if (nextFrequency.name == 'day') {nextFrequency.month = f+1
+                    nbLen = nextFrequency.bands}
 
                 if (element.dead) {
                     var elemFreqSpan = element.span
@@ -175,11 +274,10 @@
                 }
 
                 if (control.enter && (element.enter || f <= s || f >= e)) continue;
-                
                 this.output.push(container.list[f][0])
 
                 if (!element.list || !control.enter || filter) {
-                    element.enter = true
+                    element.enter = !streamlineEnter
                     element.list = element.list || {}
                     var elemFreqSpan = document.createElement('span')
                     elemFreqSpan.setAttribute('class', 'span freq ' + deltaFrequency.name)
@@ -198,8 +296,10 @@
                     var bandClassName = deltaFrequency.bandWidthsIsFunction ? deltaFrequency.bandClassName+nbLen : deltaFrequency.bandClassName
                     elemFreqSpanBandDiv.setAttribute('class', bandClassName)
                     element.span.band = elemFreqSpanBandDiv
-                    //
-                    previousSpan.appendChild(elemFreqSpan)
+
+                    // if streamline entering
+                    parentSpan.appendChild(elemFreqSpan)
+                    if (!element.enter) { elemFreqSpan.appendChild(elemFreqSpanBandDiv); continue}
                 } else {
                     element.enter = true
                     var elemFreqSpan = element.span
@@ -233,9 +333,16 @@
                     this[subFrequencyName](calendar, element, subFrequencyName, nfFirst, nbLen, subFrequency.freq, calendar.phases[subFrequency.labelNameList])                
                 }
             }
+            // whole list control list for filtering, optimize
+            if ((filter || !control.init) && !mainIsCurrent) 
+                for (var li = 0; li < fbLen; li++) {
+                    control.list[fbLen*p+li] = container.list[li]
+                }
+                container.list.position = fbLen*p
         }
         if (this.output.length > 0) console.log('Regen: '+JSON.stringify(this.output))
         if (!control.init) {
+            if (mainIsCurrent) 
             control.list = container.list
             control.init = true
             control.enter = true
@@ -243,7 +350,7 @@
         }
         
         control.enter = true
-        return container
+        return control
     }
     var R = {
         output: '',
@@ -323,7 +430,7 @@
     var D = {
         output: [],
         pad: {left: -1, right: 1},
-        year: function (calendar, deltaFrequency, start, end, empty) {
+        year: function (calendar, deltaFrequency, start, end, empty, streamline) {
             this.output = []
             var frequencies = calendar.phases.frequencies
             var currentFrequency = calendar.phases.currentFrequency
@@ -363,14 +470,51 @@
             element[name] = undefined
             return element
         },
-        month: function (elem) {
-            elements = elem || elements || {}
-            return elements
-        },
-        week: function (elem) {
+        month: function (calendar, deltaFrequency, start, end, empty, streamline) {
+            this.output = []
+            var frequencies = calendar.phases.frequencies
+            var currentFrequency = calendar.phases.currentFrequency
+            var previousFrequencyName = Object.keys(frequencies)[calendar.phases.total - (deltaFrequency.phase + 1)]
+            var previousFrequency = frequencies[previousFrequencyName] || {}
             
-            elements = elem || elements || {}
-            return elements
+            var control = deltaFrequency.element
+            if (!control.enter) return
+            var s = start + this.pad.left
+            var e = end + this.pad.right
+            var locatorMid = Math.ceil(deltaFrequency.range.locator / deltaFrequency.bands)
+            locatorMid = locatorMid < 1 ? 1 : locatorMid > previousFrequency.bands-1 ? previousFrequency.bands-1 : locatorMid
+            var first = (locatorMid - 1) * deltaFrequency.bands
+            var length = (locatorMid + 1) * deltaFrequency.bands
+            //var cbLen = deltaFrequency.bands
+            for (var cfb = first; cfb < length; cfb++) {
+                var element = control.list[cfb][1]
+                if (!element.enter || cfb > s && cfb < e) continue;
+                element.enter = false
+                if (empty)
+                    element.span.innerHTML = ''
+                else
+                    element.span.band.innerHTML = ''
+                for (var d = deltaFrequency.phase-1; d > 0; d--) {
+                    var frequencyName = Object.keys(frequencies)[d]
+                    element[frequencyName] = undefined
+                }
+                if (element.list[0])
+                for (var nfb = 0; nfb < currentFrequency.bands; nfb++) {
+                    element.list[nfb][1].enter = false
+                }
+                
+                //element.span.band = undefined
+                //element.span = undefined
+                this.output.push(control.list[cfb][0])
+                this.quarter(element, empty)
+            }
+            if (this.output.length > 0) console.log('Degen: '+JSON.stringify(this.output))
+            return control
+        },
+        week: function (element, empty) {
+            var name = 'week'
+            element[name] = undefined
+            return element
         },
         day: function (elem) {
             
@@ -458,15 +602,15 @@
             TC.style.minWidth = calendar.expand.min + 'px'
             TC.style.maxWidth = calendar.expand.max + 'px'
         },
-        this.regen = function (_current, rangeStart, rangeEnd, empty) {
+        this.regen = function (_current, rangeStart, rangeEnd, empty, streamline) {
             var _current = _current || calendar.phases.current 
-            frequency = calendar.phases.frequencies[_current] ? calendar.phases.frequencies[_current] : frequency
-            frequency.element = frequency.element ? frequency.element : {}
-            calendar.stack = calendar.stack ? calendar.stack : {}
-            calendar.stack[frequency.name] = calendar.stack[frequency.name] ? calendar.stack[frequency.name] : frequency.element 
-            switch (frequency.name) {
-                case 'year': R.year(calendar, frequency, rangeStart, rangeEnd, empty); break;
-                case 'month': R.month(calendar, frequency, rangeStart, rangeEnd, empty); break;
+            frequency = calendar.phases.frequencies[_current] || frequency
+            frequency.element = frequency.element || {}
+            calendar.stack = calendar.stack || {}
+            calendar.stack[_current] = calendar.stack[_current] || frequency.element 
+            switch (_current) {
+                case 'year': R.year(calendar, frequency, rangeStart, rangeEnd, empty, streamline); break;
+                case 'month': R.month(calendar, frequency, rangeStart, rangeEnd, empty, streamline); break;
                 case 'day': day(); hour(); break;
                 case 'hour': hour(); minute(); break;
                 case 'minute': minute(); second(); break;
@@ -474,17 +618,17 @@
                 case 'millisecond': millisecond(); break;
                 default: year(); 
             }
-            return frequency.element
+            return calendar.stack[_current]
         },
-        this.degen = function (_current, rangeStart, rangeEnd, empty) {
+        this.degen = function (_current, rangeStart, rangeEnd, empty, streamline) {
             var _current = _current || calendar.phases.current  
-            var frequency = calendar.phases.frequencies[_current] ? calendar.phases.frequencies[_current] : frequency
-            frequency.element = frequency.element ? frequency.element : {}
-            calendar.stack = calendar.stack ? calendar.stack : {}
-            calendar.stack[frequency.name] = calendar.stack[frequency.name] ? calendar.stack[frequency.name] : frequency.element 
-            switch (frequency.name) {
-                case 'year': D.year(calendar, frequency, rangeStart, rangeEnd, empty); break;
-                case 'month': D.month(calendar, frequency, rangeStart, rangeEnd, empty); break;
+            var frequency = calendar.phases.frequencies[_current] || frequency
+            frequency.element = frequency.element || {}
+            calendar.stack = calendar.stack || {}
+            calendar.stack[_current] = calendar.stack[_current] || frequency.element 
+            switch (_current) {
+                case 'year': D.year(calendar, frequency, rangeStart, rangeEnd, empty, streamline); break;
+                case 'month': D.month(calendar, frequency, rangeStart, rangeEnd, empty, streamline); break;
                 case 'day': day(); hour(); break;
                 case 'hour': hour(); minute(); break;
                 case 'minute': minute(); second(); break;

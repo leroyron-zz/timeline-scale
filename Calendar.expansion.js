@@ -139,32 +139,37 @@
 
         var ranges = this.ranges = {generate: [phases.current], length: 1}// store ranges
         this.current = []
-        var filterStr = ''
+        var outputStr = []
+        var filterStrStart = []
+        var filterStrEnd = []
         this.filter = function () {
-            var outputStr = ''
             
             // filter calendar draws during scale
             this.expandPercentSum = 0
             this.offsetLeftSum = 0
             this.deltaWidthRangeSum = 0
+            this.deltaStackLength = 1
             for (var r = 0; r < ranges.length; r++) {
                 var previous = this.current[r-1]
+                var previousLabel = previous ? previous[0] : ''
+                var previousRangeName = ranges.generate[r-1]
+                var previousPhaseElements = stack[previousRangeName]
+                var previousRange = this.ranges[previousRangeName]
                 this.offsetLeftSum += previous ? previous[1].span.offsetLeft : 0
                 var TCLocatorOffsetLeft = TC.locator.offsetLeft - this.offsetLeftSum
                 var frequency = phases.frequencies[ranges.generate[r]] || phases.currentFrequency
                 var widthRange = (this.deltaWidthRangeSum || TC.track.width) /frequency.bands
                 var deltaWidthRange = this.deltaWidthRangeSum = widthRange
 
-                var prevRangeGenerateName = ranges.generate[r-1]
-                var prevPhaseElements = stack[prevRangeGenerateName]
-
                 var range = frequency.range = this.ranges[frequency.name] ? this.ranges[frequency.name] : 
                 this.ranges[frequency.name] = {   // new range finder
                     elements: stack[frequency.name] || (stack[frequency.name] = generate.regen(frequency.name)),
-                    list: previous ? previous[2] : stack[frequency.name].list,
-                    length: previous ? Object.keys(previous[2]).length : Object.keys(stack[frequency.name].list).length,
+                    list: stack[frequency.name].list,
+                    length: phases.frequencies[frequency.name].bands,// day problem
+                    stackLength: this.deltaStackLength * phases.frequencies[frequency.name].bands,// day problem
                     tick: undefined
                 }
+                this.deltaStackLength = this.ranges[frequency.name].stackLength// day problem
 
                 if (range.tick == undefined) { range.tick = 0; /*continue;*/  }
 
@@ -175,14 +180,8 @@
 
                 range.left = Math.floor(TCLocatorOffsetLeft / deltaWidthRange) - range.expand
 
-                range.locator = Math.floor(TCLocatorOffsetLeft / deltaWidthRange)               
-                
-                this.current[r] = range.list[Object.keys(range.list)[range.locator]]
-                outputStr += this.current[r] ? this.current[r][0]+' ' : ''
-                this.current[r]
+                range.locator = Math.floor(TCLocatorOffsetLeft / deltaWidthRange)        
 
-                range.right = Math.floor(TCLocatorOffsetLeft  / deltaWidthRange) + range.expand
-                
                 if (!deltaWidthRange || range.left == range.tick) // optimize with tick
                     continue;
                 range.tick = range.left
@@ -191,6 +190,9 @@
                     console.log('Enter '+frequency.name+' '+(this.current[r] ? this.current[r][0] : ''))
                     mouse.x = CL.locator.offsetLeft - (CL.offsetLeft+TC.offsetLeft) + CL.offsetLeft + container.scrollLeft
                 }
+
+                
+                range.right = Math.floor(TCLocatorOffsetLeft  / deltaWidthRange) + range.expand
                 if (this.current[r]) { 
                     console.log('@ '+this.current[r][0]);
                 }
@@ -199,27 +201,71 @@
                 
                 range.right = range.right < 0 ? 0 : range.right > range.length - 1 ? range.length - 1 : range.right
                 
-                range.start = range.left - 1
-                range.start = range.start < 0 ? 0 : range.start
-                range.end = range.right + 1
-                range.end = range.end > range.length - 1 ? range.length - 1 : range.end
-                if (range.start == range.end) {
-                    range.start-=1 
-                    range.end+=1
-                }
-                
-                this.start = range.list[Object.keys(range.list)[range.start]]
-                
-                this.end = range.list[Object.keys(range.list)[range.end]]
+                if (frequency.name == 'year') {
+                    range.start = range.left - 1
+                    range.start = range.start < 0 ? 0 : range.start
+                    range.end = range.right + 1
+                    range.end = range.end > range.length - 1 ? range.length - 1 : range.end
+                    if (range.start == range.end) {
+                        range.start-=1 
+                        range.end+=1
+                    }
 
-                if (r == 0 || range.expand <= 0) {
-                    generate.degen(frequency.name, range.start, range.end,  ranges.length != r+1)
-                    generate.regen(frequency.name, range.start, range.end,  ranges.length != r+1)
-                    filterStr = this.start[0]+' '+ this.end[0]
+                    this.current[r] = range.list[range.locator]
+                    outputStr[r] = this.current[r] ? ' '+this.current[r][0] : ''
+
+                    this._deltaStart = range.start
+                    this._deltaLocator = range.locator
+                    this._deltaEnd = range.end
+                }
+
+                //var position = Math.floor(TC.locator.offsetLeft / deltaWidthRange)
+                //if (frequency.name == 'month') console.log('.....'+position)
+                if (frequency.name == 'month') {//mainIsCurrent = false
+                    console.log(range.expand)
+                    range.deltaStart = previousRange.list[previousRange.start][2].position
+                    range.deltaLocator = previousRange.list[previousRange.locator][2].position
+                    range.deltaEnd = previousRange.list[previousRange.end][2].position
+                    range.expand = 9
+                    range.locator = Math.floor(TC.locator.offsetLeft / deltaWidthRange)
+                    this.current[r] = range.list[range.locator]
+                    outputStr[r] = this.current[r] ? ' '+this.current[r][0] : ''
+
+                    range.start = range.locator - (Math.floor(range.expand / 2)) - 1
+                    range.start = range.start < 0 ? 0 : range.start
+                    range.end = range.locator + (Math.floor(range.expand / 2)) + 1
+                    range.end = range.end > range.stackLength - 1 ? range.stackLength - 1 : range.end
+                    if (range.start == range.end) {
+                        range.start-=1
+                        range.end+=1
+                    }
+                    this._deltaStart = range.start
+                    this._deltaLocator = range.locator
+                    this._deltaEnd = range.end
+                }
+
+                this.start = range.list[range.start]
+                this.end = range.list[range.end]
+
+                if (frequency.name == 'year') {
+                    //mainIsCurrent = true, draw & properties year
+                    //mainIsCurrent = false, properties month, day, ect..
+                    generate.degen(frequency.name, range.start, range.end,  ranges.length != r+1, false)
+                    generate.regen(frequency.name, range.start, range.end,  ranges.length != r+1, false)
+                    filterStrStart[r] = ' '+this.start[0]
+                    filterStrEnd[r] = ' '+this.end[0]
+                }
+
+                if (frequency.name == 'month') {
+                    //mainIsCurrent = false, draw month, day, ect...
+                    generate.degen(frequency.name, range.start, range.end, ranges.length != r+1, true)
+                    generate.regen(frequency.name, range.start, range.end, ranges.length != r+1, true)
+                    filterStrStart[r] = ' '+this.start[0]
+                    filterStrEnd[r] = ' '+this.end[0]
                 }
                 
             }
-            if (outputStr || filterStr) ctx.output('Current '+outputStr+' - Filter Draw Range:'+filterStr)
+            ctx.output('Current '+outputStr+' - Filter Draw Range:'+filterStrStart+' - '+filterStrEnd)
         }
 
         retract.leftOffset = 0.0
