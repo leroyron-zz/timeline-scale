@@ -13,12 +13,12 @@
     //Public
     that.params = [
         ['year', 'yearNamesSparse', 0, 8, 50, ['quarter', 'quarterNames', 0.3, 3/*'monthsInQuarter'*/], 0, undefined], 
-        ['month', 'monthNamesShort', 1.0, 12, 75, ['week', 'weekNames', 1.5, 7], 0, 'bandWidthDays'], 
-        ['day', 'dayNamesShort', 2.0, 'daysInMonth', 50, ['morningNoon', 'morningNoonNames', 2.5], 'firstDayOfMonth', undefined], 
-        ['hour', undefined, 3.0, 24, 30, ['tenMinutes', undefined, 3.5], 0, undefined], 
-        ['minute', undefined, 4.0, 60, 20, ['tenSeconds', undefined, 4.5], 0, undefined], 
-        ['second', undefined, 5.0, 60, 20, [], 0, undefined], 
-        ['millisecond', undefined, 6.0, 100, 5, [], 0, undefined]
+        ['month', 'monthNamesShort', 1.0, 12, 75, ['week', 'weekNames', 1.5, 7], 0, 'bandWidthDays', 12], 
+        ['day', 'dayNames', 2.0, 'daysInMonth', 50, ['morningNoon', 'morningNoonNames', 2.5, 12], 'firstDayOfMonth', undefined, 8], 
+        ['hour', undefined, 3.0, 24, 30, ['tenMinutes', undefined, 3.5], 0, undefined, 8], 
+        ['minute', undefined, 4.0, 60, 20, ['tenSeconds', undefined, 4.5], 0, undefined, 8], 
+        ['second', undefined, 5.0, 60, 20, [], 0, undefined, 8], 
+        ['millisecond', undefined, 6.0, 100, 5, [], 0, undefined, 8]
     ]
 
     //Class Init
@@ -51,10 +51,11 @@
         // month <> days
         this.dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
         this.dayNamesShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+        this.morningNoonNames = ['Morning','Afternoon']
         this.getDayName = function (i, b) { return b ? this.dayNamesShort[i] : this.dayNames[i] }
         this.iterate7 = function (i, f) { return (i-f) % 7 == 0 }
         this.firstDayOfMonth = function (y, m) { return new Date((y||calendar.current.year) + "-" + (m||calendar.current.month) + "-" + 1).getDay() }
-        this.daysInMonth = function (y, m) { return new Date((y||calendar.current.year), (m||calendar.current.month), 0).getDate() }
+        this.daysInMonth = function (y, m) { if (!y && !m) return 31; return new Date((y||calendar.current.year), (m||calendar.current.month), 0).getDate() }
         this.bandWidthDays = function () { return [27, 28, 29, 30, 31, 32] }
         // time in day
         this.hour24Format = false
@@ -189,25 +190,27 @@
                     phase: this.total-p,
                     labelNameList: typeof this[that.params[p][1]] != 'function' ? that.params[p][1] : this[that.params[p][1]],
                     indice: that.params[p][2],
-                    _bands: isNaN(that.params[p][3]) ? this[that.params[p][3]] : that.params[p][3],
+                    getBands: isNaN(that.params[p][3]) ? this[that.params[p][3]] : that.params[p][3],
+                    _bands:  isNaN(that.params[p][3]) ? this[that.params[p][3]]() : that.params[p][3],
                     get bands () {
-                        return typeof this._bands != 'function' ? this._bands : this._bands(this.year, this.month)
+                        return this._bands = typeof this.getBands != 'function' ? this._bands : this.getBands(this.year, this.month)
                     },
                     set bands (val) {
-                        return val
+                        return this._bands = val
                     },
-                    range: {},
+                    range: {length: that.params[p][8], locator: 0},
                     span: that.params[p][4],
                     sub: this.subRephase(that.params[p][5]),
                     subCheck: subCheck,
                     subToggle: subToggle,
                     subReset: subReset,
-                    _first: isNaN(that.params[p][6]) ? this[that.params[p][6]] : that.params[p][6],
+                    getFirst: isNaN(that.params[p][6]) ? this[that.params[p][6]] : that.params[p][6],
+                    _first: that.params[p][6],
                     get first () {
-                        return typeof this._first != 'function' ? this._first : this._first(this.year, this.month)
+                        return this._first = typeof this.getFirst != 'function' ? this._first : this.getFirst(this.year, this.month)
                     },
                     set first (val) {
-                        return val
+                        return this._first = val
                     },
                     startFunc: this.iterate7,
                     change: changePhase * (p + 1),
