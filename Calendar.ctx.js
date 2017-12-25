@@ -28,10 +28,11 @@
         this.CL.setAttribute('class', 'CL dg')
         //this.CL.addEventListener('mouseover', this.events._onmouseover)
         that.calendars.push(this.CL)
-        //this.events.init(this.CL, this.element)// initialize resize events
+        //this.events.init(this.CL, this.elements)// initialize resize events
     
         this.TC = document.createElement('div')//TIMECODE
         this.TC.setAttribute('class', 'TC')
+        window.appending(this.TC)
     
         // append all children
         this.CL.appendChild(this.TC)

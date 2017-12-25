@@ -22,14 +22,26 @@ window.popup = function (url, title, width, height) {
     var myWindow = window.open(url, title, 'width='+width+',height='+height+'');
 }
 
-window.bootstrap = function (elem) {
-    elem.appendAfter = function (elem) {
-        this.parentNode.insertBefore(elem, this.nextSibling);
+window.appending = function (elem) {
+    elem.appendAfter = function (elem, after) {
+        after = after || this
+        after.parentNode.insertBefore(elem, after.nextSibling);
     }
 
-    elem.appendBefore = function (elem) {
-        this.parentNode.insertBefore(elem, this);
+    elem.appendBefore = function (elem, before) {
+        before = before || this
+        before.parentNode.insertBefore(elem, before);
     }
+
+    elem.appendAfterFirstChild = function (elem) {
+        this.appendAfter(elem, this.firstChild);
+    }
+
+    elem.appendBeforeLastChild = function (elem) {
+        this.appendBefore(elem, this.lastChild);
+    }
+
+    return elem
 }
 window.getStyleRules = function (elem, rule) {
     var rules = elem.sheet.cssRules || elem.sheet.rules;
