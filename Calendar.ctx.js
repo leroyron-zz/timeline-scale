@@ -3,52 +3,51 @@
  * @author leroyron / http://leroy.ron@gmail.com
  */
 (function (Calendar) {
-    //Class Struct prototype
+    // Class Struct prototype
     var _struct = Calendar.prototype
     var that = _struct.ctx = {}
-    //Class Declarations
-    
-    //Private
+    // Class Declarations
 
-    //Public
+    // Private
+
+    // Public
     that.calendars = []
-    //Class Init
+    // Class Init
     that.Init = function (calendar, container, x, y, width, height, current) {
-        //Public
+        // Public
         this.container = container
-        this.TL = document.createElement('div')//TIMELINE
+        this.TL = document.createElement('div')// TIMELINE
         this.TL.setAttribute('class', 'TL')
-        this.TL.id = 'tl'+that.calendars.length
+        this.TL.id = 'tl' + that.calendars.length
         this.TL.style.left = x ? x + 'px' : ''
         this.TL.style.top = y ? y + 'px' : ''
         this.TL.style.maxWidth = width ? width + 'px' : ''
         this.TL.style.maxHeight = height ? height + 'px' : ''
-    
-        this.CL = document.createElement('div')//CALENDAR
+
+        this.CL = document.createElement('div')// CALENDAR
         this.CL.setAttribute('class', 'CL dg')
-        //this.CL.addEventListener('mouseover', this.events._onmouseover)
+        // this.CL.addEventListener('mouseover', this.events._onmouseover)
         that.calendars.push(this.CL)
-        //this.events.init(this.CL, this.elements)// initialize resize events
-    
-        this.TC = document.createElement('div')//TIMECODE
+        // this.events.init(this.CL, this.elements)// initialize resize events
+
+        this.TC = document.createElement('div')// TIMECODE
         this.TC.setAttribute('class', 'TC')
         window.appending(this.TC)
-    
+
         // append all children
         this.CL.appendChild(this.TC)
         this.TL.appendChild(this.CL)
         this.container.appendChild(this.TL)
-    
-    
+
         this.styleSheet = document.createElement('style')
-        this.styleSheet.id = 'style#'+this.TL.id
-        this.styleSheet.innerHTML = 
+        this.styleSheet.id = 'style#' + this.TL.id
+        this.styleSheet.innerHTML =
         [
-        ''
+            ''
         ].join('\n')
         this.container.appendChild(this.styleSheet)
-    
-        this.outputElement = document.createElement('div')//OUTPUT
+
+        this.outputElement = document.createElement('div')// OUTPUT
         this.outputElement.setAttribute('class', 'output')
         this.output = function (str) {
             this.outputElement.innerHTML = str

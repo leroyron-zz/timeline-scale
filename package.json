@@ -1,0 +1,10 @@
+{
+  "name": "timeline-scale",
+  "version": "0.0.1",
+  "description": "Timeline GUI for Timeline-jscode.",
+  "dependencies": {},
+  "devDependencies": {
+    "babel-eslint": "7.2.3",
+    "standard": "10.0.2"
+  }
+}

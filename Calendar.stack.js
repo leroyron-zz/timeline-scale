@@ -3,16 +3,16 @@
  * @author leroyron / http://leroy.ron@gmail.com
  */
 (function (Calendar) {
-    //Class Struct prototype
+    // Class Struct prototype
     var _struct = Calendar.prototype
     var that = _struct.stack = {}
-    //Class Declarations
-    
-    //Private
+    // Class Declarations
 
-    //Public
+    // Private
 
-    //Class Init
+    // Public
+
+    // Class Init
     that.Init = function (calendar) {
         return {}
     }
