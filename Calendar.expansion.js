@@ -560,8 +560,8 @@
             expand.percent += scroll
             expand.percent = expand.percent < 0
             ? expand.percent = 0
-            : expand.percent > phases.multipleScalePhases
-            ? expand.percent = phases.multipleScalePhases : expand.percent
+            : expand.percent >= phases.multipleScalePhases - 11
+            ? expand.percent = phases.multipleScalePhases - 11 : expand.percent
 
             var percent = expand.percent / phases.multipleScalePhases * phases.total
             phases.percent = percent % 1

@@ -259,7 +259,7 @@
 
             // --month and year assign for first day (nextFrequency.first) of month and amount of days in month (nextFrequency._bands)
             if (nextFrequency.name == 'day') nextFrequency.year = parentLabel
-            if (deltaFrequency.name == 'day') {
+            else if (deltaFrequency.name == 'day') {
                 deltaFrequency.year = container.parent[0]
                 deltaFrequency.month = (p % 12) + 1
                 fbLen = deltaFrequency.bands
@@ -280,7 +280,9 @@
                 label = !deltaFrequency.labelNameListIsFunction ? calendar.phases[deltaFrequency.labelNameList][numMod] : deltaFrequency.labelNameList()
 
                 if (deltaFrequency.name == 'day') label += '-' + (f % _fbLen + 1)
-                if (deltaFrequency.name == 'hour') {
+                else if (deltaFrequency.name == 'second' || deltaFrequency.name == 'minute') {
+                    label = (f % _fbLen) + label
+                } else if (deltaFrequency.name == 'hour') {
                     if (deltaFrequency.hour24Format) { label = (f % _fbLen) } else { label = ((f + _halfFbLen - 1) % _halfFbLen + 1) + label }
                 }
                 // Todo - For Calendar Days shifting p++ and pbLen required
@@ -545,8 +547,63 @@
             subLabel = subLabel || calendar.phases.quarterNames
 
             // subphase when expansion reaches a certain percent
+            var parentElement = element
+            var child = parentElement[name] = {enter: true, list: {}}
+            var label = subLabel[0]
+            element = child.list[label] = {enter: true, list: {}}
+
+            var elemFreqSpanBandLabel = document.createElement('label')
+            elemFreqSpanBandLabel.innerHTML = parent[0]
+            parentElement.span.band.children[0].setAttribute('class', 'first')
+            parentElement.span.band.children[0].appendChild(elemFreqSpanBandLabel)
+            element.label = elemFreqSpanBandLabel
+
+            for (let i = first; i < iterate; i += subFreq) {
+                label = subLabel[0]
+                element = child.list[label] = {enter: true, list: {}}
+
+                var elemFreqSpanBandLabel = document.createElement('label')
+                elemFreqSpanBandLabel.innerHTML = i + label
+                parentElement.span.band.children[i].setAttribute('class', 'first')
+                parentElement.span.band.children[i].appendChild(elemFreqSpanBandLabel)
+                element.label = elemFreqSpanBandLabel
+            }
+            return parent
         },
         second: regen_main,
+        tenMilliseconds: function tenMilliseconds (calendar, parent, name, first, iterate, subFreq, subLabel) {
+            var element = parent[1]
+            if (element[name] || !element.enter) { return }
+
+            first = first || 0
+            iterate = iterate || calendar.phases.quartersInYear
+            subFreq = subFreq || calendar.phases.monthsInQuarter
+            subLabel = subLabel || calendar.phases.quarterNames
+
+            // subphase when expansion reaches a certain percent
+            var parentElement = element
+            var child = parentElement[name] = {enter: true, list: {}}
+            var label = subLabel[0]
+            element = child.list[label] = {enter: true, list: {}}
+
+            var elemFreqSpanBandLabel = document.createElement('label')
+            elemFreqSpanBandLabel.innerHTML = parent[0]
+            parentElement.span.band.children[0].setAttribute('class', 'first')
+            parentElement.span.band.children[0].appendChild(elemFreqSpanBandLabel)
+            element.label = elemFreqSpanBandLabel
+
+            for (let i = first; i < iterate; i += subFreq) {
+                label = subLabel[0]
+                element = child.list[label] = {enter: true, list: {}}
+
+                var elemFreqSpanBandLabel = document.createElement('label')
+                elemFreqSpanBandLabel.innerHTML = i + label
+                parentElement.span.band.children[i].setAttribute('class', 'first')
+                parentElement.span.band.children[i].appendChild(elemFreqSpanBandLabel)
+                element.label = elemFreqSpanBandLabel
+            }
+            return parent
+        },
         millisecond: regen_main
     }
     var degen_main = function (calendar, deltaFrequency, start, end, empty) {
@@ -726,6 +783,11 @@
             return element
         },
         second: degen_main,
+        tenMilliseconds: function (element, empty) {
+            var name = 'tenMilliseconds'
+            element[name] = undefined
+            return element
+        },
         millisecond: degen_main
     }
 

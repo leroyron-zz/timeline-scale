@@ -17,10 +17,10 @@
         ['month', 'monthNamesShort', 1.0, 12, 75, ['week', 'weekNames', 1.5, 7], 0, 'bandWidthDays', 12],
         ['day', 'dayNames', 2.0, 'daysInMonth', 50, ['morningNoon', 'morningNoonNames', 2.5, 12], 'firstDayOfMonth', undefined, 8],
         // TIME
-        ['hour', 'hour24AmPm', 3.0, 24, 20, ['tenMinutes', 'min', 3.5, 10, 10], 0, undefined, 12, true],
-        ['minute', undefined, 4.0, 60, 20, ['tenSeconds', undefined, 4.5, 10], 0, undefined, 8],
-        ['second', undefined, 5.0, 60, 20, [], 0, undefined, 8],
-        ['millisecond', undefined, 6.0, 100, 5, [], 0, undefined, 8]
+        ['hour', 'hour24AmPm', 3.0, 24, 10, ['tenMinutes', 'min', 3.1, 10, 10], 0, undefined, 12, true],
+        ['minute', 'min', 4.0, 60, 5, ['tenSeconds', 'sec', 4.1, 10, 10], 0, undefined, 8, true],
+        ['second', 'sec', 5.0, 60, 1, ['tenMilliseconds', 'milli', 5.1, 10, 10], 0, undefined, 8],
+        ['millisecond', undefined, 6.0, 100, 1, [], 0, undefined, 8]
     ]
 
     // Class Init
@@ -76,8 +76,10 @@
         this.min = ['min']
         this.minutesInHour = 60
         // minutes <> seconds
+        this.sec = ['sec']
         this.secondsInMinute = 60
         // seconds <> milliseconds
+        this.milli = ['ms']
         this.millisecondsInSecond = 100
         // timestamps
         this.timestamp = {
