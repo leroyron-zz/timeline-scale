@@ -38,24 +38,83 @@
 
         // Public
         var expand = this.expand = {
-            percent: 0.0,
-            value: 0.0, /* widthValue: 0.0, */
-            in: 0.0,
-            out: 0.0,
-            min: 0.0,
-            max: 0.0,
-            freq: {min: 0.0, max: 0.0},
+            reset (reverse, cache) {
+                var _cache = {}
+                if (reverse) {
+                    _cache = cache || this.cache[this.cache.length - 1] // backup
+                    // this.percent = this._cache.percent
+                    this.decent = _cache.decent || 0.0
+                    this.value = _cache.value
+                    this.widthValue = _cache.widthValue
+                    this.in = _cache.in
+                    this.out = _cache.out
+                    this.min = _cache.min
+                    this.max = _cache.max
+                    this.freq = { min: _cache.freq.min, max: _cache.freq.max }
+                    this.unitStack = _cache.unitStack
+                    this.unitMultiple = _cache.unitMultiple
+                    this.percentile = _cache.percentile
+                    this.deltaInMutiple = _cache.deltaInMutiple
+                    this.deltaUnitMultiple = _cache.deltaUnitMultiple
+                    this.betaUnitMultiple = _cache.betaUnitMultiple
+                    this.cache.pop() // backup
+                    phases.currentFrequency.expand = undefined
+                    phases.nextFrequency.rescale = true
+                    return true
+                } else {
+                    if (cache) {
+                        _cache = {
+                            // percent: this.percent,
+                            decent: this.percent,
+                            value: this._delta,
+                            widthValue: 0.0,
+                            in: this.in,
+                            out: this.out,
+                            min: this.min,
+                            max: this.max,
+                            freq: { min: this.freq.min, max: this.freq.max },
+                            unitStack: this.unitStack,
+                            unitMultiple: this.unitMultiple,
+                            percentile: this.percentile,
+                            deltaInMutiple: this.deltaInMutiple,
+                            deltaUnitMultiple: this.deltaUnitMultiple,
+                            betaUnitMultiple: this.betaUnitMultiple
+                        }
+                        this.cache.push(_cache) // backup
+                        phases.previousFrequency.expand = _cache
+                        phases.currentFrequency.rescale = false
+                    }
+                    this.percent = this.percent || 0.0
+                    this.decent = this.percent || 0.0
+                    this.value = 0.0
+                    this.widthValue = 0.0
+                    this.in = 0.0
+                    this.out = 0.0
+                    this.min = 0.0
+                    this.max = 0.0
+                    this.freq = { min: 0.0, max: 0.0 }
+                    this.unitStack = [phases.currentFrequency._bands]
+                    this.unitMultiple = phases.currentFrequency._bands
+                    this.percentile = 1.0
+                    this.deltaInMutiple = 0.0
+                }
+                return this.enter(reverse, cache, true)
+            },
+            cache: [],
             width: function (percent) {
                 this.percentValue = (this.out - this.in) * percent
+                this._delta = this.value
                 this.value = this.deltaInMutiple + this.in + this.percentValue
                 // this.widthValue = expand.freq.min+(expand.freq.max - expand.freq.min) * percent
             },
-            unitStack: [phases.currentFrequency._bands],
-            unitMultiple: phases.currentFrequency._bands,
-            percentile: 1.0,
-            enter: function (reverse) {
+            enter: function (reverse, cache, reset) {
                 // assigning expand parameters
                 // assign freq to main expansion
+                // auto reset if no stack
+                if (!this.unitStack) return this.reset(reverse, cache)
+                if (reverse && phases.currentFrequency.expand) return this.reset(reverse, phases.currentFrequency.expand)
+
+                if (phases.currentFrequency.rescale) return this.reset(reverse, cache || true)
                 // year - month parameter change
                 this.units = phases.currentFrequency._bands
                 this.nextUnits = phases.nextFrequency._bands
@@ -97,12 +156,14 @@
                 this.betaUnitMultiple = this.deltaUnitMultiple// check possible error
 
                 console.log(JSON.stringify(this))
+
+                return reset
             }
         }
 
         TC.track._resize = function () { // only scale year frequency the rest will follow
             var deltaScale = this.scale
-            this.scale = phases.frequencies.year ? (expand.value * expand.deltaUnitMultiple) : 100
+            this.scale = style.main ? (expand.value * expand.deltaUnitMultiple) : 100
             deltaScale = this.scale / deltaScale
             expand.percentile /= deltaScale || 1
             this.width = TC.width * (this.scale / 100)
@@ -114,13 +175,17 @@
         TC.locator.style.left = TC.locator.left + '%'
         this.enter = function () {
             this.onexpansion = function (percent) {
-                if (expansion.centerFreq) TC.select = TC.children[expansion.centerFreq]
+                if (typeof expansion.centerFreq != 'undefined') {
+                    var locator = Math.floor(expansion.centerFreq)
+                    var percentile = expansion.centerFreq - locator
+                    TC.select = phases.currentFrequency.elements.list[locator][1].span
+                }
                 events.deltaX = mouse.x
                 TC.locator.mouseX = events.deltaX / (TC.track.clientWidth)
 
                 if (TC.select) {
-                    TC.locator.mouseX = TC.select.offsetLeft / (TC.track.clientWidth)
-                    TC.select.style.color = '#FFA218'
+                    TC.locator.mouseX = (TC.select.offsetLeft + (TC.select.clientWidth * percentile)) / (TC.track.clientWidth)
+                    // TC.select.className += ' highlight'
                 }
 
                 TC.track._resize()
@@ -149,16 +214,35 @@
                 expansion.onexpansion(expansion.onExpansion(zoom))
                 events._resize()
                 expansion.filter()
+                if (expansion.centerFreqPre) {
+                    expansion.centerFreq = expansion.centerFreqPre
+                    expansion.onexpansion()
+                    expansion.filter()
+                    TC.select = expansion.centerFreq = expansion.centerFreqPre = undefined
+                }
             }
 
             return zoom
         }
 
-        this.prefilter = function () {
+        this.prefilter = function (reset) {
             // filter calendar draws during scale
+            var _first = 0
+            var reverse = false
+            if (reset) {
+                for (var rl = ranges.length - 1; rl >= 0; rl--) {
+                    if (!phases.frequencies[ranges.generate[rl]].elements ||
+                        phases.frequencies[ranges.generate[rl]].elements.isMain) {
+                        phases.mainFrequency = phases.frequencies[ranges.generate[rl]]
+                        _first = rl
+                        break
+                    }
+                }
+                reverse = (_first <= ranges.first)
+                ranges.first = 0
+            }
             this.deltaWidthRangeSum = 0
-            this.deltaStackLength = 1
-            for (let r = 0; r < ranges.length; r++) {
+            for (let r = ranges.first; r < ranges.length; r++) {
                 var frequency = phases.frequencies[ranges.generate[r]] || phases.currentFrequency
                 var widthRange = (this.deltaWidthRangeSum || TC.track.width) / frequency._bands// default bands for days to keep consistent
                 var deltaWidthRange = this.deltaWidthRangeSum = widthRange
@@ -168,18 +252,41 @@
                     elements: stack[frequency.name] || (stack[frequency.name] = generate.regen(frequency.name)),
                     list: stack[frequency.name].list,
                     length: phases.frequencies[frequency.name].range.length || phases.frequencies[frequency.name]._bands, // day problem
-                    stackLength: this.deltaStackLength * phases.frequencies[frequency.name]._bands, // day problem
+                    stackLength: stack[frequency.name].list.length, // day problem
                     tick: undefined
                 }
-                this.deltaStackLength = range.stackLength// day problem
 
-                range.locator = Math.floor(TC.locator.offsetLeft / deltaWidthRange)
+                // range.locator = Math.floor(TC.locator.offsetLeft / deltaWidthRange)
 
                 if (ranges.length != r + 1) generate.degen(frequency.name, range.start, range.end, ranges.length != r + 1)
             }
+            var previousRange = {}
+            var currentRange = {}
+            var percentileOffset = 0
+            if (reset) {
+                // to-do get locator percentile from previous range a position
+                ranges.first = _first
+                if (reverse) {
+                    previousRange = this.ranges[phases.currentFrequency.name]
+                    currentRange = this.ranges[phases.nextFrequency.name]
+                    percentileOffset = currentRange.percentile / currentRange.stackLength
+                    expansion.centerFreqPre = previousRange.locator + percentileOffset
+                    TC.locator.style.left = (previousRange.percentile / previousRange.stackLength * 100) + '%'
+                    TC.track.scale = (expand.value * expand.deltaUnitMultiple)
+                    previousRange.percentile = expansion.centerFreqPre
+                } else {
+                    previousRange = this.ranges[phases.previousFrequency.name]
+                    TC.track.scale = 100
+                    percentileOffset = previousRange.percentile - previousRange.locator
+                    TC.locator.style.left = percentileOffset * 100 + '%'
+                }
+
+                TC.style.left = (CL.locator.offsetLeft - TC.locator.offsetLeft) + 'px'
+                mouse.x = CL.locator.offsetLeft - (CL.offsetLeft + TC.offsetLeft) + CL.offsetLeft + container.scrollLeft
+            }
         }
 
-        var ranges = this.ranges = {generate: [phases.current], length: 1}// store ranges
+        var ranges = this.ranges = {generate: [phases.current], first: 0, length: 1}// store ranges
         this.current = []
         var infoOut = []
         var outputStr = []
@@ -190,15 +297,15 @@
             this.expandPercentSum = 0
             this.offsetLeftSum = 0
             this.deltaWidthRangeSum = 0
-            this.deltaStackLength = 1
             var frequency = phases.currentFrequency
-            for (let r = 0; r < ranges.length; r++) {
+            for (let r = ranges.first; r < ranges.length; r++) {
                 var previous = this.current[r - 1]
                 // var previousLabel = previous ? previous[0] : ''
                 var previousRangeName = ranges.generate[r - 1]
                 // var previousPhaseElements = stack[previousRangeName]
                 var previousRange = this.ranges[previousRangeName]
                 this.offsetLeftSum += previous ? previous[1].span.offsetLeft : 0
+                if (TC.locator.offsetLeft == -1) break
                 var TCLocatorOffsetLeft = TC.locator.offsetLeft - this.offsetLeftSum
                 frequency = phases.frequencies[ranges.generate[r]] || phases.currentFrequency
                 var widthRange = (this.deltaWidthRangeSum || TC.track.width) / frequency._bands// default bands for days to keep consistent
@@ -209,14 +316,13 @@
                     elements: stack[frequency.name] || (stack[frequency.name] = generate.regen(frequency.name)),
                     list: stack[frequency.name].list,
                     length: phases.frequencies[frequency.name].range.length || phases.frequencies[frequency.name]._bands, // day problem
-                    stackLength: this.deltaStackLength * phases.frequencies[frequency.name]._bands, // day problem
+                    stackLength: stack[frequency.name].list.length, // day problem
                     tick: undefined
                 }
-                this.deltaStackLength = range.stackLength// day problem
 
                 if (range.tick == undefined) { range.tick = 0 }
 
-                range.expand = Math.floor(range.length - range.length / (phases.multipleScale / (expand.percent - this.expandPercentSum)))
+                range.expand = Math.floor(range.length - range.length / (phases.multipleScale / ((expand.percent - expand.decent) - this.expandPercentSum)))
                 this.expandPercentSum += phases.multipleScale
 
                 range.expand = range.expand <= -1 ? -1 : range.expand >= range.length ? range.length : range.expand
@@ -234,7 +340,7 @@
                 // check if year, month, day, hour, minute, second, millisecond pass hierarchy test
                 range.tick = range.left
 
-                this.current[r] = range.list[range.locator]
+                this.current[r] = range.list[range.locator] ? range.list[range.locator] : this.current[r]
 
                 if (range.expand == 0) {
                     console.log('Enter ' + frequency.name + ' ' + (this.current[r] ? this.current[r][0] : ''))
@@ -250,14 +356,14 @@
 
                 range.right = range.right < 0 ? 0 : range.right > range.length - 1 ? range.length - 1 : range.right
 
-                if (frequency.name == 'year') {
-                    range.start = range.left - 1
+                if (frequency.name == phases.mainFrequency.name) {
+                    range.start = range.locator - (Math.floor(range.expand / 2)) - 1
                     range.start = range.start < 0 ? 0 : range.start
-                    range.end = range.right + 1
-                    range.end = range.end > range.length - 1 ? range.length - 1 : range.end
+                    range.end = range.locator + (Math.floor(range.expand / 2)) + 1
+                    range.end = range.end > range.stackLength - 1 ? range.stackLength - 1 : range.end
                     if (range.start == range.end) {
-                        range.start -= 1
-                        range.end += 1
+                        range.start -= range.start <= 0 ? 0 : 1
+                        range.end += range.end >= range.stackLength - 1 ? 0 : 1
                     }
 
                     outputStr[r] = this.current[r] ? ' ' + this.current[r][0] : ''
@@ -269,10 +375,7 @@
 
                 // var position = Math.floor(TC.locator.offsetLeft / deltaWidthRange)
                 // if (frequency.name == 'month') console.log('.....'+position)
-                if (frequency.name != 'year') {
-                    if (frequency.name == 'day') {
-                        console.log(range.expand, range.locator)
-                    }
+                if (frequency.name != phases.mainFrequency.name) {
                     // mainIsCurrent = false
                     range.deltaStart = previousRange.list[previousRange.start][2].position
                     range.deltaLocator = previousRange.list[previousRange.locator][2].position
@@ -285,8 +388,8 @@
                     range.end = range.locator + (Math.floor(range.expand / 2)) + 1
                     range.end = range.end > range.stackLength - 1 ? range.stackLength - 1 : range.end
                     if (range.start == range.end) {
-                        range.start -= 1
-                        range.end += 1
+                        range.start -= range.start <= 0 ? 0 : 1
+                        range.end += range.end >= range.stackLength - 1 ? 0 : 1
                     }
                     this._deltaStart = range.start
                     this._deltaLocator = range.locator
@@ -374,7 +477,7 @@
 
             events.deltaX = e.pageX - (CL.offsetLeft + TC.offsetLeft) + container.scrollLeft
             TC.percent = (events.deltaX / (TC.clientWidth)) * expand.percentile
-            // mouse move filter* TC.locator.style.left = (TC.percent*100)+'%'
+            if (!dragScroll.interval) TC.locator.style.left = (TC.percent * 100) + '%'
 
             // center
             events.deltaCenterX = ((CL.clientWidth / 2) + (CL.offsetLeft + container.scrollLeft)) - (CL.offsetLeft + TC.offsetLeft) + container.scrollLeft
@@ -388,7 +491,7 @@
             // console.log('CL.locator: '+CL.locator.offsetLeft+' TC.locator: '+TC.locator.offsetLeft+' ')
             /// /
             if (!dragScroll.interval)mouse.x = events.deltaX
-            // mouse move filter* expansion.filter()
+            if (!dragScroll.interval) expansion.filter()
         }
         CL.addEventListener('mousemove', events._onmousemove)
 
@@ -412,8 +515,15 @@
                     dragScroll.interval = setInterval(function () {
                         mouse.x = CL.locator.offsetLeft - (CL.offsetLeft + TC.offsetLeft) + container.scrollLeft
                         _left = TC.leftTCScroll + dragScroll.rate
-                        if (TC.track.width + _left < retract.width - 5) { return }
-                        if (_left > 5) { return }
+                        if (TC.track.width + _left < retract.width - 5) {
+                            _left = (retract.width - 5) - TC.track.width
+                            TC.leftTCLocatorScroll += dragScroll.rate
+                            clearInterval(dragScroll.interval)
+                        } else if (_left > 5) {
+                            _left = 5
+                            TC.leftTCLocatorScroll += dragScroll.rate
+                            clearInterval(dragScroll.interval)
+                        }
                         TC.leftTCScroll = _left
                         TC.leftTCLocatorScroll -= dragScroll.rate
                         // leftRes = (leftTC)
@@ -488,8 +598,7 @@
                     generate.reset(ranges.generate[ranges.length - 1], deltaGenerate, !reset, range.start, range.end, reset)
                 }
             }
-            expansion.prefilter()
-            expand.enter(!reset)
+            expansion.prefilter(expand.enter(!reset))
             expand.width(phases.percent)
             if (!reset) {
                 outputStr.pop()

@@ -20,9 +20,9 @@
         var previousStack = calendar.stack[previousFrequencyName]
         var currentIsMain = deltaFrequency.name == mainFrequency.name
 
-        if (currentIsMain) {
-            previousFrequency._bands = 1
-            previousFrequency.elements = {list: {}}
+        if (currentIsMain) { // fix days when hour is main
+            previousFrequency._bands = previousFrequency._bands ? previousFrequency._bands : 1
+            previousFrequency.elements = previousFrequency.elements ? previousFrequency.elements : {list: {}}
         }
 
         var control = calendar.stack[deltaFrequency.name]
@@ -133,7 +133,6 @@
 
                     // create year frequencies keep current year in center of timecode
                     if (element.wait) {
-                        // debugger
                         // child[0] = control.list[fbLen-1][0]
                         label = '-'
                     }
@@ -158,7 +157,6 @@
                     var elemFreqSpanBandDiv = element.span.band
 
                     if (element.wait) {
-                        // debugger
                         // child[0] = control.list[fbLen-1][0]
                         label = '-'
                     }
@@ -240,7 +238,7 @@
             // calendar.ctx.TC.innerHTML = ''// if there's no parent element span container timecode must be clear and used
             var parentSpan = /* parentElement.span || */calendar.ctx.TC // used
             var fChildSpan = parentSpan.children.length - 1
-            if (!parentElement.span && currentIsMain) {
+            if (currentIsMain) {
                 deltaPrevLocator = deltaPrevLocator < 1 ? 1 : deltaPrevLocator > deltaFrequency._bands - 1 ? deltaFrequency._bands - 1 : deltaPrevLocator
                 first = Math.floor((deltaPrevLocator - 1) * deltaFrequency._bands)
                 length = (deltaPrevLocator + 1) * deltaFrequency._bands
@@ -311,7 +309,6 @@
                     element.span = window.appending(elemFreqSpan)
 
                     if (element.wait) {
-                        // debugger
                         child[0] = container.list[fbLen - 1][0]
                         label = '-'
                     }
@@ -336,7 +333,6 @@
                     var elemFreqSpanBandDiv = element.span.band
 
                     if (element.wait) {
-                        // debugger
                         child[0] = container.list[fbLen - 1][0]
                         label = '-'
                     }
@@ -402,7 +398,7 @@
             calendar.ctx.execStyle(deltaFrequency, deltaFrequency.bandWidths)
             calendar.ctx.style[deltaFrequency.name]._name = deltaFrequency.name
             calendar.ctx.style.toggle = calendar.ctx.style[deltaFrequency.name]
-            calendar.ctx.style.main = calendar.ctx.style.main || calendar.ctx.style.toggle
+            calendar.ctx.style.main = currentIsMain ? calendar.ctx.style.toggle : calendar.ctx.style.main
             return control
         }
 
