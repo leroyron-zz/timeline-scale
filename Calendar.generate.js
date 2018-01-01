@@ -718,6 +718,7 @@
             mainFrequency.elements.list.parent[1].span.appendChild(deltaFrequencyStyle.fill.right.span)
         }
         deltaFrequencyStyle.fill.right.percentile = rightFill
+        deltaFrequencyStyle.fill.refresh = true
         for (let cfb = first; cfb < length; cfb++) {
             var element = control.list[cfb][1]
             if (!element.enter || (cfb > s && cfb < e)) continue

@@ -405,11 +405,15 @@
                 filterStrStart[r] = ' ' + this.start[0]
                 filterStrEnd[r] = ' ' + this.end[0]
             }
+
+            // ! get rid out output for performance gain
+            ctx.output('Current ' + outputStr + '<br>Filter Range:' + filterStrStart + ' - ' + filterStrEnd /* + '<br>' + infoOut */)
             // filler expanding
+            if (!style[frequency.name].fill.refresh) return
+
             style[frequency.name].fill.left.width = (style[frequency.name].fill.left.percentile / 100 * style.toggle.empty.percent) + '%'
             style[frequency.name].fill.right.width = (style[frequency.name].fill.right.percentile / 100 * style.toggle.empty.percent) + '%'
-
-            ctx.output('Current ' + outputStr + '<br>Filter Range:' + filterStrStart + ' - ' + filterStrEnd + '<br>' + infoOut)
+            style[frequency.name].fill.refresh = false
         }
 
         retract.leftOffset = 0.0
