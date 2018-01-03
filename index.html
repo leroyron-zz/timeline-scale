@@ -13,17 +13,29 @@
 <script src="Calendar.events.js" type="text/javascript"></script>
 <script src="Calendar.generate.js" type="text/javascript"></script>
 <script src="Calendar.expansion.js" type="text/javascript"></script>
+<link href="markdown.css" rel="stylesheet" />
 <link href="style.css" rel="stylesheet" />
 </head>
-<body>
-<button style="opacity: 0; position: fixed; bottom: 0px; z-index: 1" onclick="window.popup('index.html', 'Fullscale Timeline', 1024, 576)">Popup</button>
+<body class="vscode-dark">
+<button style="opacity: 0.25; position: fixed; bottom: 0px; z-index: 1" onclick="window.popup('index.html', 'Fullscale Timeline', 1024, 576)">Popup</button>
+<button style="opacity: 0.25; position: fixed; bottom: 0px; left: 75px; z-index: 1" onclick="timeline[count] = new Calendar(document.body, 'year'); count++; window.onresize();">New Timeline</button>
 <div id="compact" style="border: 1px solid; position: fixed; bottom: 0px; width: 50%; height: 200px"></div>
+
 </body>
 <script>
+
 // Calendar
-var timeline1 = new Calendar(document.body, 'year')
-var timeline2 = new Calendar(document.getElementById('compact'), 'year')
-var timeline3 = new Calendar(document.body, 'year', 0, 50)
+var timeline = {}
+var count = 0
+timeline[count++] = new Calendar(document.body, 'day')
+timeline[count++] = new Calendar(document.body, 'month', window.innerWidth/4, 100, window.innerWidth/2, 45)
+timeline[count++] = new Calendar(document.body, 'millisecond', 0, 200)
+timeline[count++] = new Calendar(document.getElementById('compact'), 'year', {year: 2020})
+
+timeline[0].ctx.CL.title = 'new Calendar(document.body, \'day\')'
+timeline[1].ctx.CL.title = 'new Calendar(document.body, \'month\', window.innerWidth/4, 100, window.innerWidth/2, 45)'
+timeline[2].ctx.CL.title = 'new Calendar(document.body, \'millisecond\', 0, 200)'
+timeline[3].ctx.CL.title = 'new Calendar(document.getElementById(\'compact\'), \'year\', {year: 2020})'
 //.Streaming().access()
 window.onresize()
 </script>

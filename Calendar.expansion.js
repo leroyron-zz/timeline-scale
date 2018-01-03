@@ -13,7 +13,7 @@
     // Public
 
     // Class Init
-    that.Init = function (calendar) {
+    that.Init = function (calendar, phase, x, y, width, height) {
         // Private
         var ctx = calendar.ctx
         var container = ctx.container
@@ -213,11 +213,11 @@
             var zoom = function (zoom) {
                 expansion.onexpansion(expansion.onExpansion(zoom))
                 events._resize()
-                expansion.filter()
+                expansion.filter(true)
                 if (expansion.centerFreqPre) {
                     expansion.centerFreq = expansion.centerFreqPre
                     expansion.onexpansion()
-                    expansion.filter()
+                    expansion.filter(true)
                     TC.select = expansion.centerFreq = expansion.centerFreqPre = undefined
                 }
             }
@@ -292,7 +292,7 @@
         var outputStr = []
         var filterStrStart = []
         var filterStrEnd = []
-        this.filter = function () {
+        this.filter = function (fill) {
             // filter calendar draws during scale
             this.expandPercentSum = 0
             this.offsetLeftSum = 0
@@ -409,15 +409,15 @@
             // ! get rid out output for performance gain
             ctx.output('Current ' + outputStr + '<br>Filter Range:' + filterStrStart + ' - ' + filterStrEnd /* + '<br>' + infoOut */)
             // filler expanding
-            if (!style[frequency.name].fill.refresh) return
+            if (!style[frequency.name].fill.refresh && !fill) return
 
             style[frequency.name].fill.left.width = (style[frequency.name].fill.left.percentile / 100 * style.toggle.empty.percent) + '%'
             style[frequency.name].fill.right.width = (style[frequency.name].fill.right.percentile / 100 * style.toggle.empty.percent) + '%'
             style[frequency.name].fill.refresh = false
         }
 
-        retract.leftOffset = 0.0
-        retract.rightRetract = 1.0
+        retract.leftOffset = (x || 0) / container.width
+        retract.rightRetract = (width || container.width) / container.width
         events._resize = function () {
             // moving the timeline
             // snapping
@@ -502,10 +502,9 @@
         events._ondrag = function (e) {
             e.preventDefault()
 
-            events.mouseX = e.pageX - TL.offsetLeft + container.scrollLeft
-
             TL.style.cursor = 'pointer'
             if (retract.mode == 'center') {
+                events.mouseX = e.pageX - CL.offsetLeft + container.scrollLeft
                 dragScroll.endX = events.mouseX
                 var scrollRate = (dragScroll.startX - dragScroll.endX) * (expand.value / 500)
                 dragScroll.rate = scrollRate * 0.25
@@ -522,11 +521,11 @@
                         if (TC.track.width + _left < retract.width - 5) {
                             _left = (retract.width - 5) - TC.track.width
                             TC.leftTCLocatorScroll += dragScroll.rate
-                            clearInterval(dragScroll.interval)
+                            // clearInterval(dragScroll.interval)
                         } else if (_left > 5) {
                             _left = 5
                             TC.leftTCLocatorScroll += dragScroll.rate
-                            clearInterval(dragScroll.interval)
+                            // clearInterval(dragScroll.interval)
                         }
                         TC.leftTCScroll = _left
                         TC.leftTCLocatorScroll -= dragScroll.rate
@@ -538,11 +537,13 @@
                     }, 10)
                 }
             } else if (retract.mode == 'left') {
+                events.mouseX = e.pageX - TL.offsetLeft + container.scrollLeft
                 retract.leftOffset = events.mouseX / container.width
                 var constrict = (events.mouseX + retract.width) / container.width
                 if (constrict > 1) { retract.rightRetract -= (events.mouseX + retract.width) / container.width - 1 }
                 events._resize()
             } else if (retract.mode == 'right') {
+                events.mouseX = e.pageX - TL.offsetLeft + container.scrollLeft
                 retract.rightRetract = (events.mouseX - (retract.leftOffset * container.width)) / container.width
                 events._resize()
             }
@@ -567,17 +568,24 @@
             : expand.percent >= phases.multipleScalePhases - 11
             ? expand.percent = phases.multipleScalePhases - 11 : expand.percent
 
-            var percent = expand.percent / phases.multipleScalePhases * phases.total
-            phases.percent = percent % 1
-            // phases.percent = percent != 0 && phases.percent == 0 ? 0.09 : phases.percent
+            expand.percentage = expand.percent / phases.multipleScalePhases * phases.total
+            phases.percent = expand.percentage % 1
+            // phases.percent = expand.percentage != 0 && phases.percent == 0 ? 0.09 : phases.percent
             expand.width(phases.percent)
 
-            var phaseId = percent << 0
+            var phaseId = expand.percentage << 0
             for (let sLen = 0; sLen < phases.currentFrequency.subLength; sLen++) {
-                phases.currentFrequency.subCheck(percent, sLen)
-                console.log('Expand: ' + percent, phases.percent)
+                phases.currentFrequency.subCheck(expand.percentage, sLen)
+                console.log('Expand: ' + expand.percentage, phases.percent)
             }
             if (phases.phaseId == phases.total - phaseId) { return phases.percent }
+
+            /*var opStr = outputStr[outputStr.length - 1]
+            var opStrS = filterStrStart[filterStrStart.length - 1]
+            var opStrE = filterStrEnd[filterStrEnd.length - 1]
+            outputStr[outputStr.length - 1] = '<code>'+opStr+'</code>'
+            filterStrStart[filterStrStart.length - 1] = '<code>'+opStrS+'</code>'
+            filterStrEnd[filterStrEnd.length - 1] = '<code>'+opStrE+'</code>'*/
 
             var reset = typeof ranges.phaseId == 'undefined' || ranges.phaseId < phaseId
             ranges.phaseId = phaseId
@@ -611,8 +619,44 @@
             }
             return phases.percent
         }
-        expansion.prefilter()
+        this.prefilter()
         this.expansionCalls.push(phaseChange)
-        this.onexpansion(this.onExpansion(0.0))
+        // phaseChange(0)
+        // this.onexpansion(this.onExpansion(0.0))
+
+        if (phases.getfrequencyScale(phase) != 0) {
+            expansion.centerFreq = phases.currentFrequency.elements.list.length / 2
+            var element = phases.currentFrequency.elements.list[expansion.centerFreq][1].span
+            expansion.centerFreq += 0.025
+
+            TC.locator.mouseX = element.offsetLeft / (TC.track.clientWidth)
+            CL.locator.style.left = TC.locator.mouseX * 100 + '%'
+            events.deltaX = mouse.x = CL.locator.offsetLeft - (CL.offsetLeft + TC.offsetLeft) + CL.offsetLeft + container.scrollLeft
+            this.scaleFrom = 0
+            this.scaleTo = phases.getfrequencyScale(phase)
+
+            this.interval = setInterval(function () {
+                if (expansion.scaleFrom < expansion.scaleTo) {
+                    if (expansion.scaleFrom >= expansion.scaleTo - 0.2) {
+                        clearInterval(expansion.interval)
+                    }
+                    expansion.zoomVal = 1
+                } else if (expansion.scaleFrom > expansion.scaleTo) {
+                    if (expansion.scaleFrom <= expansion.scaleTo + 0.2) {
+                        clearInterval(expansion.interval)
+                    }
+                    expansion.zoomVal = -1
+                } else {
+                    clearInterval(expansion.interval)
+                }
+                expansion.onexpansion(expansion.onExpansion(expansion.zoomVal))
+                
+                expansion.filter(true)
+                events._resize()
+                expansion.scaleFrom = expand.percentage
+
+                TC.select = expansion.centerFreq = undefined
+            }, 50)
+        }
     }
 })(this.Calendar)

@@ -61,6 +61,7 @@
 
                     TL.addEventListener('mousemove', calendar.events._ondrag)
                     TL.addEventListener('mouseup', calendar.events._ondrop)
+                    // unlock/drop/release everywhere document.addEventListener('mouseup', calendar.events._ondrop)
                 }
             }
             TL.addEventListener('mousemove', _onmousemove)

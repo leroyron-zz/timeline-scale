@@ -15,7 +15,7 @@
         // DAY
         ['year', 'yearNamesSparse', 0, 8, 50, ['quarter', 'quarterNames', 0.3, 3], 0, undefined, 14],
         ['month', 'monthNamesShort', 1.0, 12, 75, ['week', 'weekNames', 1.5, 7], 0, 'bandWidthDays', 12],
-        ['day', 'dayNames', 2.0, 'daysInMonth', 50, ['morningNoon', 'morningNoonNames', 2.5, 12], 'firstDayOfMonth', undefined, 8],
+        ['day', 'dayNames', 2.0, 'daysInMonth', 10, ['morningNoon', 'morningNoonNames', 2.5, 12], 'firstDayOfMonth', undefined, 8],
         // TIME
         ['hour', 'hour24AmPm', 3.0, 24, 10, ['tenMinutes', 'min', 3.1, 10, 10], 0, undefined, 12, true],
         ['minute', 'min', 4.0, 60, 5, ['tenSeconds', 'sec', 4.1, 10, 10], 0, undefined, 8, true],
@@ -124,9 +124,14 @@
 
             // assign the current frequency bands for render
             if (typeof phase != 'undefined') {
-                if (isNaN(phase)) { frequencyId = this.frequencies[phase].phase } else if (!isNaN(phase)) { frequencyId = Math.ceil(phase / (100 / paramsLen)) }
+                if (isNaN(phase)) { frequencyId = this.frequencies[phase].phase } else if (!isNaN(phase)) { frequencyId = Math.floor(phase / (100 / paramsLen)) }
             }
             return this.frequencies[Object.keys(this.frequencies)[this.total - frequencyId]].name
+        }
+
+        this.getfrequencyScale = function (phase) {
+            var paramsLen = Object.keys(this.frequencies).length
+            return paramsLen - this.getfrequencyId(phase)
         }
 
         this.getfrequencyId = function (phase) {
@@ -234,6 +239,6 @@
             this.refrequency(phase)
         }
 
-        this.rephase(phase)
+        this.rephase(that.params[0][0])
     }
 })(this.Calendar)

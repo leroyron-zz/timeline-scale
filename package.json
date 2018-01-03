@@ -2,9 +2,14 @@
   "name": "timeline-scale",
   "version": "0.0.1",
   "description": "Timeline GUI for Timeline-jscode.",
+  "scripts": {
+    "start": "node-simplehttpserver . 5000",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "dependencies": {},
   "devDependencies": {
     "babel-eslint": "7.2.3",
+    "node-simplehttpserver": "^0.2.7",
     "standard": "10.0.2"
   }
 }

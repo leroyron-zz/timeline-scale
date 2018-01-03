@@ -3,14 +3,14 @@ body {
     padding: 0;
 }
 .TL {
-    height: 50px;
+    height: 70px;
 }
 .TL, .TL div {
-    position: absolute; 
+    position: relative; 
 }
 .CL {
     width: 100%;
-    height: 20px; /* 30px */
+    height: 25px;
     background: #333;
     border-bottom: #666;
     overflow: hidden;
@@ -20,6 +20,8 @@ body {
     position: relative; 
 }
 .CL span {
+    height: 100%;
+    vertical-align: top;
     position: relative;
     display: inline-block;
 }
@@ -35,6 +37,7 @@ body {
     position: absolute;
 }
 .CL .TC {
+    height: 100%;
     white-space: nowrap;
     position: absolute;
     left: 5px;
@@ -44,34 +47,38 @@ body {
     font: 11px 'Lucida Grande', sans-serif;
     text-shadow: 0 -1px 0 #111;
 }
+.span.highlight {
+    color: #FFA218
+}
 .span .band div {
-    height: 5px;
+    height: 80%;
     border-left: #666 1px solid;
     margin-left: -1px;
 }
 .span .band div.first {
-    height: 8px;
+    height: 100%;
     border-left: #FFF 1px solid;
 }
 .span .band div.start {
-    height: 3px;
+    height: 70%;
     border-left: #fff 1px solid;
 }
 .span .band div.half {
     width: 50% !important;
-    height: 8px;
+    height: 100%;
     border-left: #FFF 1px solid;
 }
 .span .band div.wait {
-    height: 5px;
+    height: 80%;
     border-left: #000 1px solid;
 }
 .span div {
     width: 100%;
+    height: 50%;
 }
 .track {
     position: absolute !important;
-    height: 20px;
+    height: 100%;
     width: 100%;
     top: 0px;
 }
@@ -83,5 +90,6 @@ body {
     margin-left: -1px;
 }
 .output {
-    position: absolute; bottom: 10px;
+    position: relative;
+    top: 0px;
 }

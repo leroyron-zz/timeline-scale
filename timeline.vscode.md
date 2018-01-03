@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<script>//5var autoRefresh = setTimeout(function(){ location.reload(); }, 3000);</script>
+<script>//var autoRefresh = setTimeout(function(){ location.reload(); }, 3000);</script>
 <meta charset="UTF-8">
 <title>FullScale TimeLine - Code</title>
 <script src="window.js" type="text/javascript"></script>
@@ -21,9 +21,16 @@
 </body>
 <script>
 // Calendar
-var timeline1 = new Calendar(document.body, 'year')
-var timeline2 = new Calendar(document.getElementById('compact'), 'year')
-var timeline3 = new Calendar(document.body, 'year', 0, 50)
+var timeline = {}
+var count = 0
+timeline[count++] = new Calendar(document.body, 'day')
+timeline[count++] = new Calendar(document.body, 'month', window.innerWidth/4, 100, window.innerWidth/2, 45)
+timeline[count++] = new Calendar(document.body, 'millisecond', 0, 200)
+timeline[count++] = new Calendar(document.getElementById('compact'), 'year', {year: 2020})
+timeline[0].ctx.CL.title = 'new Calendar(document.body, \'day\')'
+timeline[1].ctx.CL.title = 'new Calendar(document.body, \'month\', window.innerWidth/4, 100, window.innerWidth/2, 45)'
+timeline[2].ctx.CL.title = 'new Calendar(document.body, \'millisecond\', 0, 200)'
+timeline[3].ctx.CL.title = 'new Calendar(document.getElementById(\'compact\'), \'year\', {year: 2020})'
 //.Streaming().access()
 window.onresize()
 </script>

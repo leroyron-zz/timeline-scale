@@ -13,19 +13,21 @@
     // Public
     that.calendars = []
     // Class Init
-    that.Init = function (calendar, container, x, y, width, height, current) {
+    that.Init = function (calendar, container, x, y, width, height) {
         // Public
         this.container = container
         this.TL = document.createElement('div')// TIMELINE
         this.TL.setAttribute('class', 'TL')
         this.TL.id = 'tl' + that.calendars.length
-        this.TL.style.left = x ? x + 'px' : ''
+        // this.TL.style.left = x ? x + 'px' : ''
         this.TL.style.top = y ? y + 'px' : ''
-        this.TL.style.maxWidth = width ? width + 'px' : ''
-        this.TL.style.maxHeight = height ? height + 'px' : ''
+        this.TL.style.position = y ? 'absolute' : ''
+        // this.TL.style.maxWidth = width ? width + 'px' : ''
+        this.TL.style.height = height ? (height + 45) + 'px' : ''
 
         this.CL = document.createElement('div')// CALENDAR
         this.CL.setAttribute('class', 'CL dg')
+        this.CL.style.height = height ? height + 'px' : ''
         // this.CL.addEventListener('mouseover', this.events._onmouseover)
         that.calendars.push(this.CL)
         // this.events.init(this.CL, this.elements)// initialize resize events

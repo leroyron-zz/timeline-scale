@@ -817,7 +817,7 @@
             style[frequency.name].fill = {}
             style[frequency.name].fill.left = window.addStyleRules(ctx.styleSheet, '#' + TL.id + ' .span.freq.' + frequency.name + '.fill.left',
             [
-                '        min-width: 0px;'
+                ''
             ].join('\n'))
             style[frequency.name].fill.left.width = '0%'
             style[frequency.name].fill.left.span = document.createElement('span')
@@ -825,7 +825,7 @@
 
             style[frequency.name].fill.right = window.addStyleRules(ctx.styleSheet, '#' + TL.id + ' .span.freq.' + frequency.name + '.fill.right',
             [
-                '        min-width: 0px;'
+                ''
             ].join('\n'))
             style[frequency.name].fill.right.width = '0%'
             style[frequency.name].fill.right.span = document.createElement('span')
@@ -833,7 +833,7 @@
 
             style[frequency.name].freqs = window.addStyleRules(ctx.styleSheet, '#' + TL.id + ' .span.freq.' + frequency.name,
             [
-                '        min-width: ' + frequency.span + 'px;'
+                ''
             ].join('\n'))
             style[frequency.name].freqs.width = frequency.elements.list.percentile + '%'
 
